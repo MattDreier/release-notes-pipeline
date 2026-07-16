@@ -26,6 +26,9 @@ const { values } = parseArgs({
     out: { type: "string", default: "out" },
     "skip-agent": { type: "boolean", default: false }, // reuse existing manifest.json
     "skip-tts": { type: "boolean", default: false }, // reuse existing audio/
+    // Local diff file instead of GitHub's REST diff endpoint (outage escape
+    // hatch; produce one with `git show <squash-sha> --format=`).
+    "diff-file": { type: "string" },
   },
 });
 
@@ -41,7 +44,9 @@ const publicDir = join(root, "video", "public");
 const manifestPath = join(publicDir, "manifest.json");
 
 console.error(`gathering ${values.repo}#${values.pr}…`);
-const bundle = await gatherPr(values.repo, Number(values.pr));
+const bundle = await gatherPr(values.repo, Number(values.pr), {
+  diffOverride: values["diff-file"] ? await readFile(values["diff-file"], "utf8") : undefined,
+});
 
 // In --target mode the local checkout is authoritative for BOTH the config
 // and the changelog (it may be ahead of the GitHub API copy — e.g. a voice or
