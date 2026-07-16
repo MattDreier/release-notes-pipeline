@@ -29,7 +29,7 @@ describe("prompt builders", () => {
     expect(p).toContain("feat: map routing");
     expect(p).toContain("+code");
     expect(p).toContain("1-6"); // slide count constraint stated
-    expect(p).toContain("28"); // runtime budget stated
+    expect(p).toContain("18"); // runtime budget stated
     expect(p).toContain("~6 SECONDS"); // per-slide pacing target stated
     expect(p).toContain("effective communication outranks pacing"); // clarity supremacy stated
     expect(p).toContain("NON-TECHNICAL"); // audience stated

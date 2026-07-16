@@ -196,12 +196,20 @@ export async function generateManifest(
 ): Promise<GenerationResult> {
   const version = dateVersion(new Date(bundle.mergedAt));
 
-  console.error("pass 1/4: editor");
-  const plan = (await runQuery(editorPrompt(bundle, config), PLAN_SCHEMA)) as Plan;
-  console.error(`  → ${plan.slides.length} slide(s): ${plan.slides.map((s) => s.type).join(", ")}`);
-
   let notes: string[] = [];
+  let plan: Plan | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
+    // The editor re-plans on revision cycles too — critic notes are often
+    // structural ("split this into two slides"), which only the plan can fix;
+    // freezing the plan after pass 1 made such notes impossible to apply.
+    console.error(`pass 1/4: editor${attempt ? ` (revision ${attempt})` : ""}`);
+    plan = (await runQuery(
+      editorPrompt(bundle, config) +
+        (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : ""),
+      PLAN_SCHEMA,
+    )) as Plan;
+    console.error(`  → ${plan.slides.length} slide(s): ${plan.slides.map((s) => s.type).join(", ")}`);
+
     console.error(`pass 2/4: copywriter${attempt ? ` (revision ${attempt})` : ""}`);
     const copy = (await runQuery(
       copyPrompt(plan, bundle) +

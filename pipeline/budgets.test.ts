@@ -24,7 +24,7 @@ describe("budgets", () => {
     expect(estimateSpokenSeconds(thirtyWords)).toBeCloseTo(12, 0); // 30 / 2.5
   });
 
-  it("flags narration outside 28-55s", () => {
+  it("flags narration outside 18-55s", () => {
     const w = (n: number) => Array(n).fill("word").join(" ");
     expect(narrationBudgetCheck([w(100)]).ok).toBe(true); // 40s
     expect(narrationBudgetCheck([w(20)]).ok).toBe(false); // 8s — too short
@@ -33,7 +33,7 @@ describe("budgets", () => {
 
   it("exposes the budget constants", () => {
     expect(BUDGETS.titleMaxChars).toBe(48);
-    expect(BUDGETS.narration).toEqual({ minSeconds: 28, maxSeconds: 55 });
+    expect(BUDGETS.narration).toEqual({ minSeconds: 18, maxSeconds: 55 });
     expect(BUDGETS.maxSlides).toBe(6);
     expect(BUDGETS.slideMaxSeconds).toBe(12);
   });

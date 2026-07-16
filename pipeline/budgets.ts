@@ -2,7 +2,9 @@ export const BUDGETS = {
   titleMaxChars: 48, // 2 lines × ~24 chars in the huge serif
   bodyMaxChars: 320,
   wordsPerSecond: 2.5, // ~150 spoken wpm
-  narration: { minSeconds: 28, maxSeconds: 55 }, // + padding ⇒ 30–60s video
+  // 30-60s is the AIM for a typical PR, but a small infra/docs PR that's fully
+  // told in 20s should ship at 20s — padding to hit a floor is anti-communication.
+  narration: { minSeconds: 18, maxSeconds: 55 },
   maxSlides: 6,
   slideTargetSeconds: 6, // the AIM: one digestible idea per slide
   slideMaxSeconds: 12, // outlier guard only — clarity may stretch a slide well past the 6s target
@@ -49,7 +51,7 @@ export function narrationBudgetCheck(scripts: string[]): {
     return {
       seconds,
       ok: false,
-      reason: `narration ~${seconds.toFixed(0)}s is under the ${minSeconds}s floor — expand scripts`,
+      reason: `narration ~${seconds.toFixed(0)}s is under the ${minSeconds}s floor — add a grounded slide or expand scripts (never pad)`,
     };
   }
   if (seconds > maxSeconds) {
