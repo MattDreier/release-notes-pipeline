@@ -40,17 +40,25 @@ const manifestPath = join(publicDir, "manifest.json");
 
 console.error(`gathering ${values.repo}#${values.pr}…`);
 const bundle = await gatherPr(values.repo, Number(values.pr));
-const config = loadRepoConfig(bundle.configJson, values.repo.split("/")[1]);
 
-// Semver reads the previous version from the changelog; the local checkout
-// is authoritative in --target mode (it may be ahead of the GitHub API copy).
+// In --target mode the local checkout is authoritative for BOTH the config
+// and the changelog (it may be ahead of the GitHub API copy — e.g. a voice or
+// version change edited locally but not yet merged). Fall back to the fetched
+// copies when the local files are absent.
+let configJson = bundle.configJson;
 if (values.target) {
+  try {
+    configJson = JSON.parse(await readFile(join(values.target, ".release-notes.json"), "utf8"));
+  } catch {
+    /* no local config — keep the fetched copy (or undefined) */
+  }
   try {
     bundle.changelog = await readFile(join(values.target, "CHANGELOG.md"), "utf8");
   } catch {
     /* no local changelog yet — keep the fetched copy (or null) */
   }
 }
+const config = loadRepoConfig(configJson, values.repo.split("/")[1]);
 
 /** Download any remote comparison screenshots into video/public/images/. */
 async function localizeImages(m: Manifest): Promise<void> {
