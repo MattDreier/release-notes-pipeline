@@ -111,6 +111,10 @@ These targets keep slides digestible, but they are AIMS, not ceilings. If hittin
 - Don't read the title verbatim and then repeat it — narrate the story of the slide.
 - For metrics slides, say the numbers plainly ("seven megabytes lighter"). For code slides, describe what typing it does, don't spell out syntax. For grid slides, summarize the theme and name one or two highlights — never read every card.
 
+## Delivery tags (optional — ration them)
+
+The narrator voice already has a calm, warm editorial baseline. You MAY sharpen delivery with ONE inline tag per script, chosen ONLY from: [warmly] [brightly] [serious] [thoughtfully] [with quiet excitement] [slower]. Place it at the start of the sentence it colors. The default is NO tag — add one only when it genuinely improves how the sentence lands (e.g. [serious] before a breaking-change warning, [with quiet excitement] on a flagship feature). Never use theatrical tags (laughing, whispering, shouting, accents) — this is a product update, not a performance.
+
 Return one script string per slide, in order, plus cover and outro.`;
 }
 
@@ -138,6 +142,7 @@ ${prContext(bundle)}
 5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use image URLs that actually appear in the PR description.
 6. Layout fit: metrics values are real quantities from the PR; code lines are text a user would literally type into the product (not source code); grid items are genuinely minor; comparison only used when before/after images exist.
 7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud.
+8. Delivery tags: scripts may carry AT MOST one bracketed tag each, only from [warmly] [brightly] [serious] [thoughtfully] [with quiet excitement] [slower]. Fail any script with multiple tags, a tag outside that set, or a theatrical tag (laughs, whispers, shouting, accents, impressions) — the register is calm editorial, not performance.
 
 Return pass=true only if ALL checks pass. Notes must be actionable instructions, not observations — and never instructions that trade clarity for brevity.`;
 }

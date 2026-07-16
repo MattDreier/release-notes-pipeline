@@ -1,3 +1,4 @@
+import { stripDeliveryTags } from "./budgets";
 import type { Manifest } from "./manifest";
 
 /**
@@ -78,7 +79,7 @@ export function releaseNotesSection(
     }
     // Comparison slides carry screenshots, not text — the narration script is
     // the only prose that exists for them.
-    if (slide.layout === "comparison") lines.push(slide.script, "");
+    if (slide.layout === "comparison") lines.push(stripDeliveryTags(slide.script), "");
   }
   return `${lines.join("\n").trimEnd()}\n`;
 }

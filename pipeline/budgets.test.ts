@@ -6,6 +6,7 @@ import {
   fitsTitle,
   narrationBudgetCheck,
   slidePacingCheck,
+  stripDeliveryTags,
 } from "./budgets";
 
 describe("budgets", () => {
@@ -22,6 +23,15 @@ describe("budgets", () => {
   it("estimates spoken duration at 150 wpm", () => {
     const thirtyWords = Array(30).fill("word").join(" ");
     expect(estimateSpokenSeconds(thirtyWords)).toBeCloseTo(12, 0); // 30 / 2.5
+  });
+
+  it("strips delivery tags before timing — tags direct the voice, they are not spoken", () => {
+    // 10 words + a tag ⇒ still 10 words ⇒ 4s at 2.5 wps
+    const script = "[with quiet excitement] one two three four five six seven eight nine ten";
+    expect(estimateSpokenSeconds(script)).toBe(4);
+    expect(stripDeliveryTags("[serious] Heads up. [slower] It changed.")).toBe(
+      "Heads up. It changed.",
+    );
   });
 
   it("enforces only the ceiling — shortness is the critic's call, never failed locally", () => {

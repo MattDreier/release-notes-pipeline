@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { synthesize } from "./tts";
+import { NARRATOR_STYLE, synthesize } from "./tts";
 
 const pcmBase64 = Buffer.alloc(4800).toString("base64");
 const fakeResponse = {
@@ -33,7 +33,10 @@ describe("synthesize", () => {
     const body = JSON.parse(init.body as string);
     expect(body.generationConfig.responseModalities).toEqual(["AUDIO"]);
     expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Charon");
-    expect(body.contents[0].parts[0].text).toBe("Hello world");
+    // Every clip carries the editorial director's note, then the transcript.
+    expect(body.contents[0].parts[0].text).toBe(NARRATOR_STYLE + "Hello world");
+    expect(NARRATOR_STYLE).toContain("calm, warm, confident editorial narrator");
+    expect(NARRATOR_STYLE).toContain("delivery direction, not words to speak");
     expect(wav.subarray(0, 4).toString("ascii")).toBe("RIFF");
     expect(wav.length).toBe(44 + 4800);
   });

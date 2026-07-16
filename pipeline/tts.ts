@@ -15,6 +15,22 @@ type TtsCfg = {
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
+/**
+ * Director's note prepended to every clip. This is the baseline delivery-
+ * quality lever: without it the model picks an arbitrary default read.
+ * Kept deliberately restrained — the register is premium documentary,
+ * not advertisement. Scripts may additionally carry at most one inline
+ * delivery tag (see voicePrompt's allowlist).
+ */
+export const NARRATOR_STYLE = `You are narrating a short, minimalist product release-notes video.
+
+Delivery: a calm, warm, confident editorial narrator — premium documentary register. Quietly enthusiastic, never salesy, never breathless. Measured pace, natural pauses at punctuation, clean crisp diction.
+
+Read ONLY the transcript below aloud. Anything in [square brackets] is a delivery direction, not words to speak.
+
+TRANSCRIPT:
+`;
+
 /** Parse the retry delay (seconds) out of a Gemini 429 body; default 60s. */
 export function parseRetryDelaySeconds(body: string): number {
   const m = body.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
@@ -32,7 +48,7 @@ export async function synthesize(
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        contents: [{ parts: [{ text }] }],
+        contents: [{ parts: [{ text: NARRATOR_STYLE + text }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },

@@ -36,8 +36,13 @@ export function slidePacingCheck(scripts: string[]): { ok: boolean; reason?: str
 export const fitsTitle = (s: string) => s.length <= BUDGETS.titleMaxChars;
 export const fitsBody = (s: string) => s.length <= BUDGETS.bodyMaxChars;
 
+/** Bracketed delivery tags like [warmly] direct the TTS voice; they are never
+ * spoken, so strip them anywhere the script is timed or displayed as text. */
+export const stripDeliveryTags = (script: string) =>
+  script.replace(/\[[^\]]*\]\s*/g, "").trim();
+
 export function estimateSpokenSeconds(script: string): number {
-  const words = script.trim().split(/\s+/).filter(Boolean).length;
+  const words = stripDeliveryTags(script).split(/\s+/).filter(Boolean).length;
   return words / BUDGETS.wordsPerSecond;
 }
 
