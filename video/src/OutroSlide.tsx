@@ -1,6 +1,6 @@
 import React from "react";
-import { Audio, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { fadeUp } from "./anim";
+import { Audio, staticFile, useCurrentFrame } from "remotion";
+import { fadeUp, STEP } from "./anim";
 import { Layout } from "./Layout";
 import { SafeAreaGuard } from "./SafeAreaGuard";
 import { outroHeadlineSize } from "./sizing";
@@ -9,11 +9,8 @@ import { fonts, theme } from "./theme";
 
 export const OutroSlide: React.FC<{ manifest: Manifest }> = ({ manifest }) => {
   const frame = useCurrentFrame();
-  const { fps } = useVideoConfig();
   const headlineSize = outroHeadlineSize(manifest.outro.headline);
-  // The button pops with a soft spring after the headline lands.
-  const buttonScale =
-    frame < 26 ? 0 : spring({ frame: frame - 26, fps, config: { damping: 14, mass: 0.8 } });
+  const link = manifest.outro.link ?? manifest.domain;
 
   return (
     <Layout
@@ -31,7 +28,7 @@ export const OutroSlide: React.FC<{ manifest: Manifest }> = ({ manifest }) => {
             fontStyle: "italic",
             fontSize: 48,
             color: theme.muted,
-            ...fadeUp(frame, 4, 14, 18),
+            ...fadeUp(frame, STEP, 14, 18),
           }}
         >
           Thanks for watching
@@ -45,37 +42,21 @@ export const OutroSlide: React.FC<{ manifest: Manifest }> = ({ manifest }) => {
             lineHeight: 1.05,
             letterSpacing: "-0.01em",
             marginTop: 12,
-            ...fadeUp(frame, 10),
+            // Display type: longer travel, slower settle.
+            ...fadeUp(frame, STEP * 2, 24, 38),
           }}
         >
           {manifest.outro.headline}
         </div>
-        <div
-          style={{
-            display: "inline-flex",
-            alignItems: "center",
-            gap: 20,
-            background: theme.ink,
-            borderRadius: 999,
-            padding: "26px 52px",
-            marginTop: 56,
-            transform: `scale(${buttonScale})`,
-            transformOrigin: "left center",
-          }}
-        >
-          <div style={{ width: 16, height: 16, borderRadius: "50%", background: theme.accent }} />
-          <span style={{ fontFamily: fonts.sans, fontSize: 38, fontWeight: 600, color: "#FFFFFF" }}>
-            {manifest.outro.cta}
-          </span>
-        </div>
+        {/* Deliberate quiet — the space the CTA button used to occupy. */}
+        <div style={{ height: 130 }} />
         <div
           style={{
             fontFamily: fonts.serif,
             fontStyle: "italic",
             fontSize: 38,
             color: theme.muted,
-            marginTop: 48,
-            ...fadeUp(frame, 36, 14, 18),
+            ...fadeUp(frame, STEP * 5, 16, 18),
           }}
         >
           {manifest.outro.subline}
@@ -89,12 +70,12 @@ export const OutroSlide: React.FC<{ manifest: Manifest }> = ({ manifest }) => {
             fontFamily: fonts.sans,
             fontSize: 28,
             letterSpacing: "0.18em",
-            color: theme.muted,
-            ...fadeUp(frame, 44, 14, 16),
+            color: theme.ink,
+            ...fadeUp(frame, STEP * 7, 16, 14),
           }}
         >
-          <div style={{ width: 48, height: 2, background: theme.muted, flexShrink: 0 }} />
-          {manifest.domain}
+          <div style={{ width: 48, height: 2, background: theme.accent, flexShrink: 0 }} />
+          {link}
         </div>
       </div>
     </Layout>

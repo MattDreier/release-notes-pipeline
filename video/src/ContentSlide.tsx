@@ -1,6 +1,6 @@
 import React from "react";
 import { Audio, staticFile, useCurrentFrame } from "remotion";
-import { fadeOutAtEnd, fadeUp } from "./anim";
+import { exitStyle, fadeUp, STEP } from "./anim";
 import { Layout } from "./Layout";
 import { SafeAreaGuard } from "./SafeAreaGuard";
 import { contentTitleSize } from "./sizing";
@@ -23,7 +23,7 @@ export const ContentSlide: React.FC<{
 }> = ({ manifest, index, durationInFrames }) => {
   const frame = useCurrentFrame();
   const slide = manifest.slides[index];
-  const exit = fadeOutAtEnd(frame, durationInFrames);
+  const exit = exitStyle(frame, durationInFrames);
   // Card-based layouts need vertical room — cap their title size.
   const titleSize =
     slide.layout === "standard" ? contentTitleSize(slide.title) : Math.min(contentTitleSize(slide.title), 110);
@@ -38,8 +38,8 @@ export const ContentSlide: React.FC<{
     >
       <Audio src={staticFile(`audio/slide${index + 1}.wav`)} />
       <SafeAreaGuard slide={`content ${index + 1}`} />
-      <div data-safe style={{ position: "absolute", left: 96, top: 180, right: 96, opacity: exit }}>
-        <div style={{ display: "flex", alignItems: "center", gap: 18, ...fadeUp(frame, 4, 14, 18) }}>
+      <div data-safe style={{ position: "absolute", left: 96, top: 180, right: 96, ...exit }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 18, ...fadeUp(frame, STEP, 14, 14) }}>
           <div
             style={{
               width: 14,
@@ -70,7 +70,8 @@ export const ContentSlide: React.FC<{
             letterSpacing: "-0.01em",
             marginTop: 44,
             maxWidth: 1500,
-            ...fadeUp(frame, 12),
+            // Display type: longer travel, slower settle (mass-proportional).
+            ...fadeUp(frame, STEP * 2, 22, 34),
           }}
         >
           {slide.title}

@@ -4,6 +4,7 @@ import type { PrBundle } from "./gather";
 import type { RepoConfig } from "./config";
 
 const bundle: PrBundle = {
+  repo: "MattDreier/dispatch-schedule-ui",
   number: 207,
   title: "feat: map routing",
   body: "Adds routing",

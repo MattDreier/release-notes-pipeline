@@ -65,8 +65,10 @@ export const ManifestSchema = z.object({
   slides: z.array(SlideSchema).min(1).max(BUDGETS.maxSlides),
   outro: z.object({
     headline: z.string().min(1),
-    cta: z.string().min(1),
+    cta: z.string().min(1).optional(), // legacy — the outro no longer renders a button
     subline: z.string().min(1),
+    // GitHub repo URL shown on the outro's link line (falls back to `domain`).
+    link: z.string().min(1).optional(),
     script: z.string().min(1),
   }),
 });

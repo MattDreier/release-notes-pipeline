@@ -3,7 +3,7 @@ import { Img, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig }
 import { fadeUp } from "./anim";
 import { contentBodySize } from "./sizing";
 import type { Slide } from "./types";
-import { card, fonts, pill, theme } from "./theme";
+import { card, codeLabel, fonts, pill, theme } from "./theme";
 
 // Each template renders the area BELOW the category+title header of a content
 // slide. All entrances start around frame 22 (after the title has landed).
@@ -87,7 +87,7 @@ export const CodeBody: React.FC<{ slide: Slide }> = ({ slide }) => {
           fontFamily: fonts.sans,
           fontSize: 22,
           letterSpacing: "0.22em",
-          color: "#6D9BC3",
+          color: codeLabel,
           fontWeight: 600,
           textTransform: "uppercase",
           marginBottom: 28,
@@ -145,7 +145,7 @@ export const ComparisonBody: React.FC<{ slide: Slide }> = ({ slide }) => {
         }}
       >
         <div style={{ ...label, color: theme.muted }}>{ba.beforeLabel}</div>
-        <Img src={staticFile(ba.before)} style={{ ...imgBox, opacity: 0.85 }} />
+        <Img src={staticFile(ba.before)} style={{ ...imgBox, opacity: 0.7 }} />
       </div>
       <div
         style={{

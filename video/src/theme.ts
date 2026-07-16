@@ -6,13 +6,16 @@ const lora = loadLora();
 const inter = loadInter();
 const mono = loadMono();
 
+// Dark editorial palette — derived from the product's OKLCH design tokens
+// (.dark block), converted to sRGB hex. Warm dark greys, not pure black;
+// the accent is the product's lime primary.
 export const theme = {
-  bg: "#FAF9F6",
-  accent: "#D05A3F",
-  ink: "#191919",
-  muted: "#8A8A8A",
-  hairline: "#E5E2DC",
-  versionGhost: "#C9C5BD",
+  bg: "#262624", // --background
+  accent: "#C6EEA9", // --primary (lime)
+  ink: "#E5E5E2", // --popover-foreground — headline-bright, not stark white
+  muted: "#B7B5A9", // --muted-foreground
+  hairline: "#3E3E38", // --border
+  cardSurface: "#30302E", // --popover — one step above bg for card layers
 } as const;
 
 export const fonts = {
@@ -21,23 +24,28 @@ export const fonts = {
   mono: mono.fontFamily,
 } as const;
 
-// Category dot colors — strict design-system mapping.
+// Category dot colors — the product's chart/status hues, all legible on dark.
 export const categoryColors: Record<string, string> = {
-  FEATURE: "#D05A3F", // terracotta
-  IMPROVEMENT: "#5C768D", // slate blue
-  FIX: "#D49B8D", // rose gold
-  "BREAKING CHANGE": "#2E2E2E", // deep charcoal
+  FEATURE: "#C6EEA9", // primary lime
+  IMPROVEMENT: "#BBEBEB", // cyan (chart-5)
+  FIX: "#F7DC69", // amber (chart-4)
+  "BREAKING CHANGE": "#BF4D43", // destructive red
 };
 
-// Card chrome shared by code/comparison/grid templates.
+// Card chrome shared by code/comparison/grid templates. On a dark ground the
+// border carries the edge; the shadow is a whisper of depth, not the outline.
 export const card = {
-  background: "#FFFFFF",
+  background: theme.cardSurface,
+  border: `1px solid ${theme.hairline}`,
   borderRadius: 18,
-  boxShadow: "0 12px 40px rgba(25, 25, 25, 0.07)",
+  boxShadow: "0 12px 40px rgba(0, 0, 0, 0.35)",
 } as const;
 
-// Grid pill tint (rose family, per the reference frames).
-export const pill = { background: "#F6DDD5", color: "#C25E43" } as const;
+// Grid pill tint — recessed dark chip with bright text (--accent tokens).
+export const pill = { background: "#1A1915", color: "#F5F4EE" } as const;
+
+// Code-card label — cyan reads as "terminal" against the dark card.
+export const codeLabel = "#BBEBEB" as const;
 
 export type Timing = {
   coverFrames: number;

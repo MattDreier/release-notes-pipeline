@@ -32,6 +32,7 @@ export function extractImageUrls(body: string): string[] {
 }
 
 export type PrBundle = {
+  repo: string; // "owner/name"
   number: number;
   title: string;
   body: string;
@@ -65,6 +66,7 @@ export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
     configJson = undefined; // no config file — defaults apply
   }
   return {
+    repo,
     number: viewJson.number,
     title: viewJson.title,
     body: viewJson.body ?? "",

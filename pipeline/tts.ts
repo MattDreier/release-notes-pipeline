@@ -1,5 +1,6 @@
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
+import { stripDeliveryTags } from "./budgets";
 import type { RepoConfig } from "./config";
 import type { Manifest } from "./manifest";
 import { pcmToWav } from "./wav";
@@ -77,8 +78,9 @@ export async function synthesizeManifest(
   ];
   const files: string[] = [];
   for (const [name, script] of jobs) {
-    // sequential — avoids TTS rate limits
-    const wav = await synthesize(script, { model: config.ttsModel, voice: config.voice, apiKey });
+    // sequential — avoids TTS rate limits. Delivery tags are banned (the voice's
+    // consistent default read is the product) — strip any stray bracket defensively.
+    const wav = await synthesize(stripDeliveryTags(script), { model: config.ttsModel, voice: config.voice, apiKey });
     const path = join(outDir, name);
     await Bun.write(path, wav);
     files.push(path);

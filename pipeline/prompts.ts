@@ -77,9 +77,6 @@ ${prContext(bundle)}
   - comparison → "beforeAfter": {"before": <URL chosen from the PR screenshots list>, "after": <URL>, "beforeLabel"?: short caption, "afterLabel"?: short caption}. Pick the URLs that clearly show old vs new.
   - grid → "gridItems": 2-6 items of {"tag": lowercase area word like "search" or "map" (max 14 chars), "description": one plain sentence a user understands (max 110 chars)}.
 
-Also write:
-- "subline": one quiet outro sentence (e.g. "Full release notes at the link below.").
-
 Every claim must be true to the diff. If the editor's angle overstates, tone it down.`;
 }
 
@@ -110,10 +107,7 @@ These targets keep slides digestible, but they are AIMS, not ceilings. If hittin
 - Numbers and versions spelled the way a narrator says them.
 - Don't read the title verbatim and then repeat it — narrate the story of the slide.
 - For metrics slides, say the numbers plainly ("seven megabytes lighter"). For code slides, describe what typing it does, don't spell out syntax. For grid slides, summarize the theme and name one or two highlights — never read every card.
-
-## Delivery tags (optional — ration them)
-
-The narrator's default read is the baseline, and BETWEEN-SLIDE CONSISTENCY IS SACRED — every tag creates a local deviation from it, so ration hard. You MAY sharpen delivery with AT MOST ONE inline tag per script, chosen ONLY from: [warmly] [brightly] [serious] [thoughtfully] [with quiet excitement] [slower]. Place it at the start of the sentence it colors. The default is NO tag — add one only when the content genuinely calls for a different human register (e.g. [serious] before a breaking-change warning, [with quiet excitement] on a flagship feature). Never use theatrical tags (laughing, whispering, shouting, accents) — this is a product update, not a performance.
+- Plain prose only — never include bracketed stage directions or delivery tags; the scripts are read verbatim by a text-to-speech voice whose consistent default delivery is the product.
 
 Return one script string per slide, in order, plus cover and outro.`;
 }
@@ -141,8 +135,7 @@ ${prContext(bundle)}
 4. Runtime: total narration must stay under ${BUDGETS.narration.maxSeconds} seconds (hard ceiling). There is NO minimum — never demand filler or padding. Fail a short draft ONLY when its brevity comes from missing context a first-time viewer needs, not because the change itself is small.
 5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use image URLs that actually appear in the PR description.
 6. Layout fit: metrics values are real quantities from the PR; code lines are text a user would literally type into the product (not source code); grid items are genuinely minor; comparison only used when before/after images exist.
-7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud.
-8. Delivery tags: scripts may carry AT MOST one bracketed tag each, only from [warmly] [brightly] [serious] [thoughtfully] [with quiet excitement] [slower]. Fail any script with multiple tags, a tag outside that set, or a theatrical tag (laughs, whispers, shouting, accents, impressions) — the register is calm editorial, not performance.
+7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud, in plain prose — fail any script containing bracketed stage directions or delivery tags.
 
 Return pass=true only if ALL checks pass. Notes must be actionable instructions, not observations — and never instructions that trade clarity for brevity.`;
 }

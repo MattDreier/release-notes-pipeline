@@ -138,9 +138,8 @@ const COPY_SCHEMA = {
         required: ["title"],
       },
     },
-    subline: { type: "string" },
   },
-  required: ["slides", "subline"],
+  required: ["slides"],
 };
 
 const VOICE_SCHEMA = {
@@ -178,7 +177,7 @@ type CopySlide = {
   beforeAfter?: { before: string; after: string; beforeLabel?: string; afterLabel?: string };
   gridItems?: { tag: string; description: string }[];
 };
-type Copy = { slides: CopySlide[]; subline: string };
+type Copy = { slides: CopySlide[] };
 type Voice = { cover: string; slides: string[]; outro: string };
 type Critique = { pass: boolean; notes: string[] };
 
@@ -257,8 +256,10 @@ export async function generateManifest(
       }),
       outro: {
         headline: `${config.product} News`,
-        cta: "Subscribe",
-        subline: copy.subline,
+        // Fixed copy — this line points at the two written artifacts committed
+        // alongside the video, so it is not the copywriter's to reinterpret.
+        subline: "Full release notes and official changelog at the link below.",
+        link: `github.com/${bundle.repo}`,
         script: voice.outro,
       },
     };
