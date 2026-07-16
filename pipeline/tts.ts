@@ -4,7 +4,8 @@ import type { RepoConfig } from "./config";
 import type { Manifest } from "./manifest";
 import { pcmToWav } from "./wav";
 
-type TtsCfg = { model: string; voice: string; apiKey: string; fetchImpl?: typeof fetch };
+type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
+type TtsCfg = { model: string; voice: string; apiKey: string; fetchImpl?: FetchLike };
 
 export async function synthesize(
   text: string,

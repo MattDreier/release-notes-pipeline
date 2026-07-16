@@ -13,7 +13,7 @@ export const runAgentQuery: RunQuery = async (prompt, schema) => {
     prompt,
     options: {
       tools: [], // pure text reasoning — no file/bash access needed
-      maxTurns: 1,
+      maxTurns: 8, // structured-output retries can consume extra turns; 1 is too tight
       outputFormat: { type: "json_schema", schema },
     },
   })) {

@@ -1,0 +1,24 @@
+{
+  "product": "dispatch-schedule-ui",
+  "version": "v2026.7.3",
+  "pr": 205,
+  "domain": "GITHUB.COM/DISPATCH-SCHEDULE-UI",
+  "brand": "DISPATCH-SCHEDULE-UI",
+  "cover": {
+    "script": "New release notes are here. First up, a fix for the date range that kept forgetting where you were."
+  },
+  "slides": [
+    {
+      "type": "FIX",
+      "title": "The Range Comes With You",
+      "body": "Switch from Calendar to Map and the map used to fall back to its own saved range, sometimes landing you back on today. Now the window carries across when you switch: the week you were reading stays the week you see, with the same work orders in the queue and the same job still selected.",
+      "script": "You pick a week in the Calendar. You jump over to the Map. And the map used to shrug and go back to whatever range it had saved, sometimes dropping you right back on today. Not anymore. The window travels with you now. The week you were reading is the week you see. Same work orders in the queue, same job still selected."
+    }
+  ],
+  "outro": {
+    "headline": "dispatch-schedule-ui News",
+    "cta": "Subscribe",
+    "subline": "Full release notes at the link below.",
+    "script": "Full notes at the link below. Subscribe to catch the next one."
+  }
+}
