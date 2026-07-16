@@ -103,7 +103,7 @@ These targets keep slides digestible, but they are AIMS, not ceilings. If hittin
 
 ## Style rules
 
-- Short sentences. No parentheticals. No jargon — a viewer with zero technical background must follow every word.
+- Short sentences. No parentheticals. No exclamation marks. No jargon — a viewer with zero technical background must follow every word.
 - Numbers and versions spelled the way a narrator says them.
 - Don't read the title verbatim and then repeat it — narrate the story of the slide.
 - For metrics slides, say the numbers plainly ("seven megabytes lighter"). For code slides, describe what typing it does, don't spell out syntax. For grid slides, summarize the theme and name one or two highlights — never read every card.
@@ -121,7 +121,8 @@ ${AUDIENCE}
 
 Above every other check: would a first-time, non-technical viewer actually UNDERSTAND each slide on one hearing? Telegraphic, over-compressed, or ambiguous phrasing is a FAILURE even if it satisfies every budget. When any other check conflicts with comprehension, comprehension wins — never issue a note that would make the copy less clear (e.g. never say "cut to N words" if cutting would damage the message; say "split into two slides" or "allow this slide the extra seconds" instead).
 
-Draft manifest:
+Draft content under review — the agent-written scripts and slides ONLY. The video's fixed chrome (product name, version, brand, domain, outro headline/subline/link) is product-owner configuration, already vetted and NOT changeable by any revision pass: it is out of scope, so never issue notes about it.
+
 ${JSON.stringify(draft, null, 2)}
 
 Source PR (ground truth):

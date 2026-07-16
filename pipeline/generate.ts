@@ -206,7 +206,7 @@ export async function generateManifest(
     // standard slide is the escape hatch — shorter and plainer beats clever.
     const safeMode =
       attempt === 2
-        ? `\n\nSAFE MODE — FINAL ATTEMPT. Two drafts have failed review. Do not iterate on the previous plan: simplify aggressively instead. Collapse to the FEWEST slides that remain clear — ideally ONE "standard" slide telling the single most important thing, or ONE "grid" slide bundling the small items. Use the plainest language available. A short, modest, obviously-true video that a stranger understands is the goal; ambition is not.`
+        ? `\n\nSAFE MODE — FINAL ATTEMPT. Two drafts have failed review. Do not iterate on the previous plan: simplify aggressively instead. Strip to the essential story in its simplest form — one or two "standard" slides (a problem → fix pair is fine and often clearer than one packed slide), or one "grid" slide bundling small items. Never pack two distinct beats into a single slide to save a slide. Use the plainest language available. A short, modest, obviously-true video that a stranger understands is the goal; ambition is not.`
         : "";
     console.error(`pass 1/4: editor${attempt === 2 ? " (SAFE MODE)" : attempt ? ` (revision ${attempt})` : ""}`);
     plan = (await runQuery(
@@ -273,7 +273,16 @@ export async function generateManifest(
     const pacing = slidePacingCheck(draft.slides.map((s) => s.script));
     const schema = validateManifest(draft);
     console.error("pass 4/4: critic");
-    const critic = (await runQuery(criticPrompt(draft, bundle), CRITIC_SCHEMA)) as Critique;
+    // The critic judges ONLY agent-written content. Fixed chrome (product,
+    // version, brand, domain, outro link/subline/headline) is product-owner
+    // config no revision pass can change — showing it produces unactionable
+    // notes that burn revision cycles (live failure, PR #246 regeneration).
+    const judgeView = {
+      cover: { script: draft.cover.script },
+      slides: draft.slides,
+      outro: { script: draft.outro.script },
+    };
+    const critic = (await runQuery(criticPrompt(judgeView, bundle), CRITIC_SCHEMA)) as Critique;
 
     if (localBudget.ok && pacing.ok && schema.ok && critic.pass) {
       console.error(`  ✓ approved (narration ~${localBudget.seconds.toFixed(0)}s, ${draft.slides.length} slides)`);
