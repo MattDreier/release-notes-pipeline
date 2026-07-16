@@ -47,14 +47,33 @@ export type PrBundle = {
   changelog: string | null;
 };
 
+/** GitHub-side transient failures worth retrying: 5xx from the REST API and
+ * gh's own timeout/connection wording. 4xx (auth, not-found) fail fast. */
+export const isTransientGhError = (stderr: string): boolean =>
+  /HTTP 5\d\d|\b5\d\d Service Unavailable|Bad Gateway|Gateway Timeout|timed? ?out|connection (reset|refused)/i.test(
+    stderr,
+  );
+
+const GH_RETRY_DELAYS_MS = [2_000, 8_000, 20_000];
+
 async function gh(args: string[]): Promise<string> {
-  const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
-  const [out, err] = await Promise.all([
-    new Response(proc.stdout).text(),
-    new Response(proc.stderr).text(),
-  ]);
-  if ((await proc.exited) !== 0) throw new Error(`gh ${args[0]} failed: ${err}`);
-  return out;
+  let lastErr = "";
+  for (let attempt = 0; ; attempt++) {
+    const proc = Bun.spawn(["gh", ...args], { stdout: "pipe", stderr: "pipe" });
+    const [out, err] = await Promise.all([
+      new Response(proc.stdout).text(),
+      new Response(proc.stderr).text(),
+    ]);
+    if ((await proc.exited) === 0) return out;
+    lastErr = err;
+    // A GitHub blip mid-run costs a whole release video in CI — ride out
+    // short 5xx incidents instead of dying on the first one.
+    if (attempt >= GH_RETRY_DELAYS_MS.length || !isTransientGhError(err)) break;
+    const delay = GH_RETRY_DELAYS_MS[attempt];
+    console.error(`  gh ${args[0]} transient failure (attempt ${attempt + 1}), retrying in ${delay / 1000}s: ${err.trim().slice(0, 120)}`);
+    await new Promise((r) => setTimeout(r, delay));
+  }
+  throw new Error(`gh ${args[0]} failed: ${lastErr}`);
 }
 
 export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
