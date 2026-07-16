@@ -1,6 +1,7 @@
 .env
 node_modules/
 out/
+runs/
 video/public/audio/
 video/public/manifest.json
 .secrets/

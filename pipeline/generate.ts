@@ -5,6 +5,7 @@ import { dateVersion } from "./config";
 import type { PrBundle } from "./gather";
 import { validateManifest, type Manifest } from "./manifest";
 import { copyPrompt, criticPrompt, editorPrompt, voicePrompt } from "./prompts";
+import { GenerationExhausted, type AttemptRecord, type DraftSnapshot } from "./runlog";
 import { versionForPr } from "./version";
 
 export type RunQuery = (prompt: string, schema: Record<string, unknown>) => Promise<unknown>;
@@ -187,6 +188,9 @@ export type GenerationResult = {
   /** Terse dev-facing bullets for CHANGELOG.md, produced by the same
    * diff-grounded editor pass that plans the video. */
   technical: { category: Category; bullet: string }[];
+  /** Per-cycle ledger records — every draft, gate verdict, and pass timing,
+   * including the cycles that failed review. See runlog.ts. */
+  attempts: AttemptRecord[];
 };
 
 export async function generateManifest(
@@ -195,6 +199,12 @@ export async function generateManifest(
   { runQuery = runAgentQuery }: { runQuery?: RunQuery } = {},
 ): Promise<GenerationResult> {
   let notes: string[] = [];
+  const attempts: AttemptRecord[] = [];
+  const timed = async <T>(fn: () => Promise<T>): Promise<[T, number]> => {
+    const t0 = performance.now();
+    const v = await fn();
+    return [v, Math.round(performance.now() - t0)];
+  };
   // Revision context: critic notes are indexical ("Slide 3's second sentence…"),
   // so revision passes must SEE the draft the notes refer to. Without it each
   // cycle re-invents the manifest from the PR bundle alone — which is how a
@@ -232,29 +242,38 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
           ? ` (revision ${attempt})`
           : "";
     console.error(`pass 1/4: editor${attemptLabel}`);
-    plan = (await runQuery(
-      editorPrompt(bundle, config) +
-        (notes.length ? `${revisionContext()}\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : "") +
-        safeMode,
-      PLAN_SCHEMA,
-    )) as Plan;
+    const [planOut, editorMs] = await timed(() =>
+      runQuery(
+        editorPrompt(bundle, config) +
+          (notes.length ? `${revisionContext()}\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : "") +
+          safeMode,
+        PLAN_SCHEMA,
+      ),
+    );
+    plan = planOut as Plan;
     console.error(`  → ${plan.slides.length} slide(s): ${plan.slides.map((s) => s.type).join(", ")}`);
 
     console.error(`pass 2/4: copywriter${attempt ? ` (revision ${attempt})` : ""}`);
-    const copy = (await runQuery(
-      copyPrompt(plan, bundle) +
-        (notes.length ? `${revisionContext()}\n\nREVISION NOTES (fix these):\n- ${notes.join("\n- ")}` : ""),
-      COPY_SCHEMA,
-    )) as Copy;
+    const [copyOut, copywriterMs] = await timed(() =>
+      runQuery(
+        copyPrompt(plan!, bundle) +
+          (notes.length ? `${revisionContext()}\n\nREVISION NOTES (fix these):\n- ${notes.join("\n- ")}` : ""),
+        COPY_SCHEMA,
+      ),
+    );
+    const copy = copyOut as Copy;
 
     console.error("pass 3/4: voiceover");
     // Revision notes go to the voiceover pass too — the cover/outro scripts are
     // written here, so critic feedback about them must reach this pass.
-    const voice = (await runQuery(
-      voicePrompt(copy, plan) +
-        (notes.length ? `${revisionContext()}\n\nREVISION NOTES from the previous cycle (apply any that concern scripts):\n- ${notes.join("\n- ")}` : ""),
-      VOICE_SCHEMA,
-    )) as Voice;
+    const [voiceOut, voiceoverMs] = await timed(() =>
+      runQuery(
+        voicePrompt(copy, plan!) +
+          (notes.length ? `${revisionContext()}\n\nREVISION NOTES from the previous cycle (apply any that concern scripts):\n- ${notes.join("\n- ")}` : ""),
+        VOICE_SCHEMA,
+      ),
+    );
+    const voice = voiceOut as Voice;
 
     // Semver is descriptive: the bump falls out of this attempt's classified
     // contents (breaking → major, feature → minor, fix/improvement → patch),
@@ -296,17 +315,15 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
       },
     };
 
-    // Snapshot for the next cycle's revision context (agent-written content
-    // only — same scope the critic judges).
-    prevDraft = JSON.stringify(
-      {
-        cover: { script: draft.cover.script },
-        slides: draft.slides,
-        outro: { script: draft.outro.script },
-      },
-      null,
-      1,
-    );
+    // Agent-written content of this cycle's draft — the scope the critic
+    // judges, the next cycle's revision baseline, and the ledger's retained
+    // draft. One snapshot serves all three.
+    const snapshot: DraftSnapshot = {
+      cover: { script: draft.cover.script },
+      slides: draft.slides,
+      outro: { script: draft.outro.script },
+    };
+    prevDraft = JSON.stringify(snapshot, null, 1);
 
     // Local hard checks first (free), then the critic pass (agent).
     const localBudget = narrationBudgetCheck([
@@ -321,16 +338,26 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
     // version, brand, domain, outro link/subline/headline) is product-owner
     // config no revision pass can change — showing it produces unactionable
     // notes that burn revision cycles (live failure, PR #246 regeneration).
-    const judgeView = {
-      cover: { script: draft.cover.script },
-      slides: draft.slides,
-      outro: { script: draft.outro.script },
-    };
-    const critic = (await runQuery(criticPrompt(judgeView, bundle), CRITIC_SCHEMA)) as Critique;
+    const [criticOut, criticMs] = await timed(() =>
+      runQuery(criticPrompt(snapshot, bundle), CRITIC_SCHEMA),
+    );
+    const critic = criticOut as Critique;
+
+    attempts.push({
+      attempt,
+      safeMode: attempt >= SAFE_MODE_FROM,
+      slideCount: draft.slides.length,
+      slideTypes: draft.slides.map((s) => s.type),
+      estimatedSeconds: Number(localBudget.seconds.toFixed(1)),
+      gates: { runtime: localBudget.ok, pacing: pacing.ok, schema: schema.ok, critic: critic.pass },
+      criticNotes: critic.notes,
+      draft: snapshot,
+      passMs: { editor: editorMs, copywriter: copywriterMs, voiceover: voiceoverMs, critic: criticMs },
+    });
 
     if (localBudget.ok && pacing.ok && schema.ok && critic.pass) {
       console.error(`  ✓ approved (narration ~${localBudget.seconds.toFixed(0)}s, ${draft.slides.length} slides)`);
-      return { manifest: schema.manifest, technical: plan.technical };
+      return { manifest: schema.manifest, technical: plan.technical, attempts };
     }
 
     notes = [
@@ -341,5 +368,9 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
     ];
     console.error(`  ✗ revision cycle ${attempt + 1}: ${notes.join(" | ")}`);
   }
-  throw new Error(`manifest failed validation after ${MAX_ATTEMPTS - 1} revision cycles: ${notes.join(" | ")}`);
+  throw new GenerationExhausted(
+    `manifest failed validation after ${MAX_ATTEMPTS - 1} revision cycles: ${notes.join(" | ")}`,
+    attempts,
+    notes,
+  );
 }
