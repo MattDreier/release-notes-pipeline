@@ -23,6 +23,14 @@ export function truncateDiff(diff: string, maxBytes = 80_000): string {
   return out;
 }
 
+/** Image URLs referenced in a PR body (markdown or HTML) — before/after screenshots. */
+export function extractImageUrls(body: string): string[] {
+  const urls = new Set<string>();
+  for (const m of body.matchAll(/!\[[^\]]*\]\((https?:\/\/[^\s)]+)\)/g)) urls.add(m[1]);
+  for (const m of body.matchAll(/<img[^>]+src=["'](https?:\/\/[^"']+)["']/g)) urls.add(m[1]);
+  return [...urls];
+}
+
 export type PrBundle = {
   number: number;
   title: string;
@@ -30,6 +38,7 @@ export type PrBundle = {
   labels: string[];
   mergedAt: string;
   diff: string;
+  images: string[];
   configJson: unknown;
 };
 
@@ -62,6 +71,7 @@ export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
     labels: (viewJson.labels ?? []).map((l: { name: string }) => l.name),
     mergedAt: viewJson.mergedAt,
     diff,
+    images: extractImageUrls(viewJson.body ?? ""),
     configJson,
   };
 }

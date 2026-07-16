@@ -1,5 +1,5 @@
 import { query } from "@anthropic-ai/claude-agent-sdk";
-import { BUDGETS, narrationBudgetCheck } from "./budgets";
+import { BUDGETS, narrationBudgetCheck, slidePacingCheck } from "./budgets";
 import type { RepoConfig } from "./config";
 import { dateVersion } from "./config";
 import type { PrBundle } from "./gather";
@@ -28,6 +28,9 @@ export const runAgentQuery: RunQuery = async (prompt, schema) => {
 };
 
 // JSON schemas for each pass (enforced by the SDK's structured output).
+const CATEGORY_ENUM = ["FEATURE", "IMPROVEMENT", "FIX", "BREAKING CHANGE"];
+const LAYOUT_ENUM = ["standard", "metrics", "code", "comparison", "grid"];
+
 const PLAN_SCHEMA = {
   type: "object",
   additionalProperties: false,
@@ -41,11 +44,12 @@ const PLAN_SCHEMA = {
         type: "object",
         additionalProperties: false,
         properties: {
-          type: { type: "string", enum: ["FEATURE", "FIX", "IMPROVEMENT"] },
+          type: { type: "string", enum: CATEGORY_ENUM },
+          layout: { type: "string", enum: LAYOUT_ENUM },
           angle: { type: "string" },
           targetSeconds: { type: "number" },
         },
-        required: ["type", "angle", "targetSeconds"],
+        required: ["type", "layout", "angle", "targetSeconds"],
       },
     },
   },
@@ -63,8 +67,53 @@ const COPY_SCHEMA = {
       items: {
         type: "object",
         additionalProperties: false,
-        properties: { title: { type: "string" }, body: { type: "string" } },
-        required: ["title", "body"],
+        properties: {
+          title: { type: "string" },
+          body: { type: "string" },
+          metrics: {
+            type: "array",
+            minItems: 1,
+            maxItems: 3,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: { value: { type: "string" }, label: { type: "string" } },
+              required: ["value", "label"],
+            },
+          },
+          code: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              label: { type: "string" },
+              lines: { type: "array", minItems: 1, maxItems: 6, items: { type: "string" } },
+            },
+            required: ["label", "lines"],
+          },
+          beforeAfter: {
+            type: "object",
+            additionalProperties: false,
+            properties: {
+              before: { type: "string" },
+              after: { type: "string" },
+              beforeLabel: { type: "string" },
+              afterLabel: { type: "string" },
+            },
+            required: ["before", "after"],
+          },
+          gridItems: {
+            type: "array",
+            minItems: 2,
+            maxItems: 6,
+            items: {
+              type: "object",
+              additionalProperties: false,
+              properties: { tag: { type: "string" }, description: { type: "string" } },
+              required: ["tag", "description"],
+            },
+          },
+        },
+        required: ["title"],
       },
     },
     subline: { type: "string" },
@@ -93,8 +142,20 @@ const CRITIC_SCHEMA = {
   required: ["pass", "notes"],
 };
 
-type Plan = { slides: { type: "FEATURE" | "FIX" | "IMPROVEMENT"; angle: string; targetSeconds: number }[] };
-type Copy = { slides: { title: string; body: string }[]; subline: string };
+type Category = "FEATURE" | "IMPROVEMENT" | "FIX" | "BREAKING CHANGE";
+type LayoutType = "standard" | "metrics" | "code" | "comparison" | "grid";
+type Plan = {
+  slides: { type: Category; layout: LayoutType; angle: string; targetSeconds: number }[];
+};
+type CopySlide = {
+  title: string;
+  body?: string;
+  metrics?: { value: string; label: string }[];
+  code?: { label: string; lines: string[] };
+  beforeAfter?: { before: string; after: string; beforeLabel?: string; afterLabel?: string };
+  gridItems?: { tag: string; description: string }[];
+};
+type Copy = { slides: CopySlide[]; subline: string };
 type Voice = { cover: string; slides: string[]; outro: string };
 type Critique = { pass: boolean; notes: string[] };
 
@@ -134,12 +195,20 @@ export async function generateManifest(
       domain: config.domain.toUpperCase(),
       brand: config.brand.toUpperCase(),
       cover: { script: voice.cover },
-      slides: plan.slides.map((s, i) => ({
-        type: s.type,
-        title: copy.slides[i]?.title ?? "",
-        body: copy.slides[i]?.body ?? "",
-        script: voice.slides[i] ?? "",
-      })),
+      slides: plan.slides.map((s, i) => {
+        const c = copy.slides[i];
+        return {
+          type: s.type,
+          layout: s.layout,
+          title: c?.title ?? "",
+          script: voice.slides[i] ?? "",
+          ...(c?.body !== undefined ? { body: c.body } : {}),
+          ...(c?.metrics !== undefined ? { metrics: c.metrics } : {}),
+          ...(c?.code !== undefined ? { code: c.code } : {}),
+          ...(c?.beforeAfter !== undefined ? { beforeAfter: c.beforeAfter } : {}),
+          ...(c?.gridItems !== undefined ? { gridItems: c.gridItems } : {}),
+        };
+      }),
       outro: {
         headline: `${config.product} News`,
         cta: "Subscribe",
@@ -154,17 +223,19 @@ export async function generateManifest(
       ...draft.slides.map((s) => s.script),
       draft.outro.script,
     ]);
+    const pacing = slidePacingCheck(draft.slides.map((s) => s.script));
     const schema = validateManifest(draft);
     console.error("pass 4/4: critic");
     const critic = (await runQuery(criticPrompt(draft, bundle), CRITIC_SCHEMA)) as Critique;
 
-    if (localBudget.ok && schema.ok && critic.pass) {
-      console.error(`  ✓ approved (narration ~${localBudget.seconds.toFixed(0)}s)`);
+    if (localBudget.ok && pacing.ok && schema.ok && critic.pass) {
+      console.error(`  ✓ approved (narration ~${localBudget.seconds.toFixed(0)}s, ${draft.slides.length} slides)`);
       return schema.manifest;
     }
 
     notes = [
       ...(localBudget.ok ? [] : [localBudget.reason!]),
+      ...(pacing.ok ? [] : [pacing.reason!]),
       ...(schema.ok ? [] : [schema.error]),
       ...critic.notes,
     ];

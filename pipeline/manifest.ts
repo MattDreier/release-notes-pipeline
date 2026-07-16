@@ -1,12 +1,59 @@
 import { z } from "zod";
 import { BUDGETS } from "./budgets";
 
-export const SlideSchema = z.object({
-  type: z.enum(["FEATURE", "FIX", "IMPROVEMENT"]),
-  title: z.string().min(1).max(BUDGETS.titleMaxChars),
-  body: z.string().min(1).max(BUDGETS.bodyMaxChars),
-  script: z.string().min(1),
-});
+export const CATEGORIES = ["FEATURE", "IMPROVEMENT", "FIX", "BREAKING CHANGE"] as const;
+export const LAYOUTS = ["standard", "metrics", "code", "comparison", "grid"] as const;
+
+export const SlideSchema = z
+  .object({
+    type: z.enum(CATEGORIES),
+    layout: z.enum(LAYOUTS).default("standard"),
+    title: z.string().min(1).max(BUDGETS.titleMaxChars),
+    script: z.string().min(1),
+    // Layout payloads — exactly one is required, matching `layout`.
+    body: z.string().min(1).max(BUDGETS.bodyMaxChars).optional(),
+    metrics: z
+      .array(z.object({ value: z.string().min(1).max(10), label: z.string().min(1).max(30) }))
+      .min(1)
+      .max(3)
+      .optional(),
+    code: z
+      .object({
+        label: z.string().min(1).max(20).default("COMMAND"),
+        lines: z.array(z.string().min(1).max(64)).min(1).max(6),
+      })
+      .optional(),
+    beforeAfter: z
+      .object({
+        before: z.string().min(1), // URL (agent output) or public-relative path (post-download)
+        after: z.string().min(1),
+        beforeLabel: z.string().max(24).default("BEFORE"),
+        afterLabel: z.string().max(24).default("AFTER"),
+      })
+      .optional(),
+    gridItems: z
+      .array(z.object({ tag: z.string().min(1).max(14), description: z.string().min(1).max(110) }))
+      .min(2)
+      .max(6)
+      .optional(),
+  })
+  .superRefine((slide, ctx) => {
+    const required: Record<(typeof LAYOUTS)[number], keyof typeof slide> = {
+      standard: "body",
+      metrics: "metrics",
+      code: "code",
+      comparison: "beforeAfter",
+      grid: "gridItems",
+    };
+    const need = required[slide.layout];
+    if (slide[need] === undefined) {
+      ctx.addIssue({
+        code: "custom",
+        path: [need],
+        message: `layout "${slide.layout}" requires the "${need}" payload`,
+      });
+    }
+  });
 
 export const ManifestSchema = z.object({
   product: z.string().min(1),

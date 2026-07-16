@@ -25,8 +25,38 @@ const good = {
 };
 
 describe("validateManifest", () => {
-  it("accepts a valid manifest", () => {
-    expect(validateManifest(good)).toEqual({ ok: true, manifest: good });
+  it("accepts a valid manifest, defaulting layout to standard", () => {
+    const r = validateManifest(good);
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.manifest.slides[0].layout).toBe("standard");
+  });
+
+  it("requires the payload matching each layout", () => {
+    const base = { ...good.slides[0] };
+    // standard without body fails
+    expect(validateManifest({ ...good, slides: [{ ...base, body: undefined }] }).ok).toBe(false);
+    // metrics layout without metrics payload fails
+    expect(validateManifest({ ...good, slides: [{ ...base, layout: "metrics" }] }).ok).toBe(false);
+    // metrics with payload passes (body not needed)
+    const metrics = { ...base, body: undefined, layout: "metrics", metrics: [{ value: "-7 MB", label: "binary size" }] };
+    expect(validateManifest({ ...good, slides: [metrics] }).ok).toBe(true);
+    // grid needs 2-6 items
+    const grid = { ...base, body: undefined, layout: "grid", gridItems: [{ tag: "search", description: "d" }] };
+    expect(validateManifest({ ...good, slides: [grid] }).ok).toBe(false);
+    // comparison needs beforeAfter
+    const cmp = {
+      ...base,
+      body: undefined,
+      layout: "comparison",
+      beforeAfter: { before: "images/b.png", after: "images/a.png" },
+    };
+    const r = validateManifest({ ...good, slides: [cmp] });
+    expect(r.ok).toBe(true);
+    if (r.ok) expect(r.manifest.slides[0].beforeAfter?.beforeLabel).toBe("BEFORE");
+  });
+
+  it("accepts BREAKING CHANGE as a category", () => {
+    expect(validateManifest({ ...good, slides: [{ ...good.slides[0], type: "BREAKING CHANGE" }] }).ok).toBe(true);
   });
 
   it("rejects unknown slide types", () => {
@@ -36,9 +66,10 @@ describe("validateManifest", () => {
     if (!r.ok) expect(r.error).toContain("slides");
   });
 
-  it("rejects zero slides and more than three slides", () => {
+  it("rejects zero slides and more than six slides", () => {
     expect(validateManifest({ ...good, slides: [] }).ok).toBe(false);
-    expect(validateManifest({ ...good, slides: Array(4).fill(good.slides[0]) }).ok).toBe(false);
+    expect(validateManifest({ ...good, slides: Array(7).fill(good.slides[0]) }).ok).toBe(false);
+    expect(validateManifest({ ...good, slides: Array(6).fill(good.slides[0]) }).ok).toBe(true);
   });
 
   it("rejects over-budget title/body", () => {

@@ -1,5 +1,21 @@
 import { describe, expect, it } from "vitest";
-import { isNoiseFile, truncateDiff } from "./gather";
+import { extractImageUrls, isNoiseFile, truncateDiff } from "./gather";
+
+describe("extractImageUrls", () => {
+  it("finds markdown and html images, deduped", () => {
+    const body = `Before:\n![before](https://github.com/user-attachments/assets/abc.png)\n
+After: <img src="https://github.com/user-attachments/assets/def.png" width="400">\n
+Dupe: ![x](https://github.com/user-attachments/assets/abc.png)`;
+    expect(extractImageUrls(body)).toEqual([
+      "https://github.com/user-attachments/assets/abc.png",
+      "https://github.com/user-attachments/assets/def.png",
+    ]);
+  });
+
+  it("returns empty for image-free bodies", () => {
+    expect(extractImageUrls("just text, no [links](https://x.com)")).toEqual([]);
+  });
+});
 
 describe("isNoiseFile", () => {
   it("flags lockfiles, snapshots, and generated dirs", () => {

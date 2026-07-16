@@ -1,0 +1,69 @@
+{
+  "product": "Dispatch",
+  "version": "v2026.7.16",
+  "pr": 999,
+  "domain": "DISPATCH.SOLARINBOUND.COM",
+  "brand": "MATT DREIER",
+  "cover": {
+    "script": "Dispatch release notes. Five updates this time, from faster loading to a smarter search bar."
+  },
+  "slides": [
+    {
+      "type": "FEATURE",
+      "layout": "standard",
+      "title": "The Range Comes With You",
+      "body": "Switch from Calendar to Map and the window carries across: the week you were reading stays the week you see, with the same jobs in the queue.",
+      "script": "Switch from the calendar to the map, and the dates you were looking at come along with you."
+    },
+    {
+      "type": "IMPROVEMENT",
+      "layout": "metrics",
+      "title": "Lighter and Faster",
+      "metrics": [
+        { "value": "-7 MB", "label": "smaller download" },
+        { "value": "2×", "label": "faster board load" }
+      ],
+      "script": "The app is now seven megabytes smaller, and the board loads twice as fast."
+    },
+    {
+      "type": "FEATURE",
+      "layout": "code",
+      "title": "Search by Technician",
+      "code": {
+        "label": "SEARCH",
+        "lines": ["tech: Maria after: 9am", "roof repair near Tampa"]
+      },
+      "script": "Type a technician's name or a job and a time, right into the search bar."
+    },
+    {
+      "type": "BREAKING CHANGE",
+      "layout": "comparison",
+      "title": "A Cleaner Queue",
+      "beforeAfter": {
+        "before": "images/demo-before.jpg",
+        "after": "images/demo-after.jpg",
+        "beforeLabel": "BEFORE",
+        "afterLabel": "AFTER"
+      },
+      "script": "The queue looks different now. Here is the old view, and here is the new one."
+    },
+    {
+      "type": "FIX",
+      "layout": "grid",
+      "title": "Also Fixed",
+      "gridItems": [
+        { "tag": "map", "description": "Pins no longer vanish when you zoom out past the city level" },
+        { "tag": "chat", "description": "Photos you send now show up for the office right away" },
+        { "tag": "schedule", "description": "Dragging a job no longer flashes it back to its old spot" },
+        { "tag": "login", "description": "Signing in on a new phone remembers you correctly" }
+      ],
+      "script": "And a handful of small fixes, from steadier map pins to smoother photo sharing in chat."
+    }
+  ],
+  "outro": {
+    "headline": "Dispatch News",
+    "cta": "Subscribe",
+    "subline": "Full release notes at the link below.",
+    "script": "Thanks for watching. Full notes at the link below."
+  }
+}

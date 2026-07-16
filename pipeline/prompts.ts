@@ -2,6 +2,10 @@ import { BUDGETS } from "./budgets";
 import type { RepoConfig } from "./config";
 import type { PrBundle } from "./gather";
 
+const AUDIENCE = `## Audience (applies to every word you write)
+
+The viewer is NON-TECHNICAL. They use the product; they have never seen the code, the issue tracker, or any internal discussion. Every sentence must make sense to someone with zero context: describe what they can now do or what stopped being annoying, never how it was implemented. No repo names, branch names, file names, framework names, or engineering vocabulary.`;
+
 const prContext = (bundle: PrBundle) => `## PR #${bundle.number}: ${bundle.title}
 
 Labels: ${bundle.labels.join(", ") || "(none)"}
@@ -9,49 +13,65 @@ Labels: ${bundle.labels.join(", ") || "(none)"}
 ### PR description
 ${bundle.body || "(empty)"}
 
+### Screenshots found in the PR description
+${bundle.images.length ? bundle.images.map((u, i) => `${i + 1}. ${u}`).join("\n") : "(none)"}
+
 ### Diff (noise files omitted)
 \`\`\`diff
 ${bundle.diff}
 \`\`\``;
 
 export function editorPrompt(bundle: PrBundle, config: RepoConfig): string {
-  return `You are the release-notes editor for "${config.product}". A pull request just merged. Your job is to decide what in it is newsworthy to a USER of the product — not to a developer reading the code.
+  const wordsPerSlide = Math.round(BUDGETS.slideTargetSeconds * BUDGETS.wordsPerSecond);
+  return `You are the release-notes editor for "${config.product}". A pull request just merged. Decide what in it is newsworthy to a USER of the product.
+
+${AUDIENCE}
 
 ${prContext(bundle)}
 
 ## Your task
 
-Plan a short release-notes video. Decide:
+Plan a short release-notes video as a sequence of 1-${BUDGETS.maxSlides} slides. AIM FOR ~${BUDGETS.slideTargetSeconds} SECONDS of narration per slide (~${wordsPerSlide} words) — one digestible idea per slide, for the audience's attention. This is a target, not a straitjacket: if an idea genuinely needs 8-9 seconds to land clearly, give it 8-9 seconds. Prefer splitting an oversized idea into two slides when a clean split exists; NEVER compress wording to the point of harming comprehension — effective communication outranks pacing, always.
 
-1. Is this PR newsworthy to a user at all? (A pure chore/refactor/infra PR is not — but it still gets one modest IMPROVEMENT slide framed around what quietly got better, e.g. reliability or speed.)
-2. How many slides: 1-3. One clear story beats three thin ones. A small fix PR = 1 slide with fuller narration; a big feature PR = 2-3 tighter slides.
-3. For each slide: a category (FEATURE for new capability, FIX for a repaired defect, IMPROVEMENT for everything else), a one-sentence story angle written from the user's point of view, and a narration time allocation in seconds.
+For each slide choose:
+
+1. "type": FEATURE (new capability) | IMPROVEMENT (faster/smoother/smaller) | FIX (repaired defect) | BREAKING CHANGE (existing behavior changed under users' feet).
+2. "layout": pick the template that best carries the idea:
+   - "standard" — the default: headline + short supporting paragraph.
+   - "metrics" — ONLY for quantifiable wins (times, sizes, counts). 1-3 giant number+label pairs.
+   - "code" — a "here is what you type" card. Use ONLY when showing the user literal text they would type into the product (a search query, a command, a formula). NOT for showing source code.
+   - "comparison" — before/after SCREENSHOTS side by side. Available ONLY if the PR description contains usable before/after images (see the screenshots list above). If no images exist, this layout is forbidden.
+   - "grid" — bundle 2-6 small fixes/improvements into one "Also fixed" style slide (tag + one plain-language line each) instead of wasting slides on minor items.
+3. "angle": one sentence, user's point of view.
+4. "targetSeconds": ~${BUDGETS.slideTargetSeconds} by default; up to ~10 when the idea needs the room.
 
 ## Runtime budget (hard constraint)
 
-Total narration across the whole video must land between 28 and 55 seconds, allocated as:
-- Cover intro: ~6-9 seconds (you don't plan this, but leave room for it)
-- Your slides: the middle ~18-42 seconds, split across slide targetSeconds
-- Outro: ~4-6 seconds (also leave room)
+Total narration (cover ~6-9s + slides + outro ~4-6s) must land between ${BUDGETS.narration.minSeconds} and ${BUDGETS.narration.maxSeconds} seconds. Slides together: roughly 15-40 seconds.
 
-So the SUM of your slide targetSeconds values should be roughly 18-40 seconds.
-
-Ground every angle in what the diff actually changes. Do not invent capabilities the code does not show.`;
+Ground every angle in what the diff actually changes. Do not invent capabilities the code does not show. A pure chore/refactor PR still gets one modest IMPROVEMENT slide about what quietly got better.`;
 }
 
 export function copyPrompt(plan: unknown, bundle: PrBundle): string {
-  return `You are a copywriter for a minimalist, high-end editorial release-notes video (think Apple-adjacent restraint: confident, concrete, zero hype-words).
+  return `You are a copywriter for a minimalist, high-end editorial release-notes video (confident, concrete, zero hype-words).
 
-An editor has planned the slides:
+${AUDIENCE}
+
+An editor has planned the slides (respect each slide's layout):
 ${JSON.stringify(plan, null, 2)}
 
 Source PR for grounding:
 ${prContext(bundle)}
 
-## Write, for each planned slide (same order):
+## Write, for each planned slide (same order)
 
-- "title": the big serif headline. HARD LIMIT ${BUDGETS.titleMaxChars} characters (renders as up to 2 lines of ~24). Editorial noun-phrase, Title Case, no trailing period. Like "Nested Sub-Agents" or "1M Context Unstuck".
-- "body": the supporting paragraph. HARD LIMIT ${BUDGETS.bodyMaxChars} characters. 2-4 plain sentences a user understands, present tense, concrete about what changed and why it matters. No markdown, no code identifiers unless a user would type them, no exclamation marks.
+- "title": the big serif headline. HARD LIMIT ${BUDGETS.titleMaxChars} characters. Editorial noun-phrase, Title Case, no trailing period. Like "Nested Sub-Agents" or "The Range Comes With You".
+- The layout payload (exactly one, matching the slide's layout):
+  - standard → "body": HARD LIMIT ${BUDGETS.bodyMaxChars} chars. 2-4 plain sentences. No markdown.
+  - metrics → "metrics": 1-3 items of {"value": short big number like "-7 MB" or "2×" (max 10 chars), "label": what it measures in plain words (max 30 chars)}.
+  - code → "code": {"label": what this input is, e.g. "SEARCH" or "COMMAND" (max 20 chars), "lines": 1-6 short strings of EXACTLY what the user types (max 64 chars each)}.
+  - comparison → "beforeAfter": {"before": <URL chosen from the PR screenshots list>, "after": <URL>, "beforeLabel"?: short caption, "afterLabel"?: short caption}. Pick the URLs that clearly show old vs new.
+  - grid → "gridItems": 2-6 items of {"tag": lowercase area word like "search" or "map" (max 14 chars), "description": one plain sentence a user understands (max 110 chars)}.
 
 Also write:
 - "subline": one quiet outro sentence (e.g. "Full release notes at the link below.").
@@ -61,26 +81,31 @@ Every claim must be true to the diff. If the editor's angle overstates, tone it 
 
 export function voicePrompt(copy: unknown, plan: { slides: { targetSeconds: number }[] }): string {
   const targets = plan.slides
-    .map((s, i) => `- slide ${i + 1}: ~${s.targetSeconds}s ≈ ${Math.round(s.targetSeconds * BUDGETS.wordsPerSecond)} words`)
+    .map(
+      (s, i) =>
+        `- slide ${i + 1}: ~${s.targetSeconds}s ≈ ${Math.round(s.targetSeconds * BUDGETS.wordsPerSecond)} words`,
+    )
     .join("\n");
-  return `You are a voiceover writer. Rewrite the following slide copy as narration scripts — written for the EAR, not the eye. Speech runs at ~150 words per minute (${BUDGETS.wordsPerSecond} words/second).
+  return `You are a voiceover writer. Rewrite the following slide copy as narration scripts — written for the EAR of a NON-TECHNICAL viewer. Speech runs at ~150 words per minute (${BUDGETS.wordsPerSecond} words/second).
 
 Slide copy:
 ${JSON.stringify(copy, null, 2)}
 
-## Word targets (hit these within ±15%)
+## Word targets (aim here — but clarity always wins)
 
-- "cover": ~7 seconds ≈ 17 words. Introduce the release: product name, that these are the release notes, and tee up what's inside.
+- "cover": ~7 seconds ≈ 17 words. Introduce the release: product name, that these are the release notes, tee up what's inside.
 - slides:
 ${targets}
-- "outro": ~5 seconds ≈ 12 words. One warm closing line inviting the viewer to subscribe or read the full notes.
+- "outro": ~5 seconds ≈ 12 words. One warm closing line.
+
+These targets keep slides digestible, but they are AIMS, not ceilings. If hitting a target would force telegraphic, hard-to-follow phrasing, use the extra words — a clear 9-second script always beats an incomprehensible 5-second one.
 
 ## Style rules
 
-- Short sentences. No parentheticals, no colons mid-sentence.
-- Numbers and versions spelled the way a narrator says them ("version twenty twenty-six dot seven").
+- Short sentences. No parentheticals. No jargon — a viewer with zero technical background must follow every word.
+- Numbers and versions spelled the way a narrator says them.
 - Don't read the title verbatim and then repeat it — narrate the story of the slide.
-- No "in this update we..." filler; get to the substance.
+- For metrics slides, say the numbers plainly ("seven megabytes lighter"). For code slides, describe what typing it does, don't spell out syntax. For grid slides, summarize the theme and name one or two highlights — never read every card.
 
 Return one script string per slide, in order, plus cover and outro.`;
 }
@@ -88,19 +113,27 @@ Return one script string per slide, in order, plus cover and outro.`;
 export function criticPrompt(draft: unknown, bundle: PrBundle): string {
   return `You are a skeptical release-notes editor doing the final quality gate on a video manifest before it renders. Fail anything that would embarrass us.
 
+${AUDIENCE}
+
+## THE PRIME DIRECTIVE: effective communication
+
+Above every other check: would a first-time, non-technical viewer actually UNDERSTAND each slide on one hearing? Telegraphic, over-compressed, or ambiguous phrasing is a FAILURE even if it satisfies every budget. When any other check conflicts with comprehension, comprehension wins — never issue a note that would make the copy less clear (e.g. never say "cut to N words" if cutting would damage the message; say "split into two slides" or "allow this slide the extra seconds" instead).
+
 Draft manifest:
 ${JSON.stringify(draft, null, 2)}
 
 Source PR (ground truth):
 ${prContext(bundle)}
 
-## Checks (fail with a specific note if any miss)
+## Checks (fail with a specific, actionable note if any miss)
 
-1. Character budgets: every slide title ≤ ${BUDGETS.titleMaxChars} chars, every body ≤ ${BUDGETS.bodyMaxChars} chars.
-2. Runtime: total narration (cover + slides + outro) at ${BUDGETS.wordsPerSecond} words/second must be between ${BUDGETS.narration.minSeconds} and ${BUDGETS.narration.maxSeconds} seconds. Show your word count arithmetic in a note if it fails.
-3. Grounding: every claim in titles, bodies, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim.
-4. Tone: no jargon a user wouldn't know, no internal codenames, no hype-words ("revolutionary", "game-changing"), no exclamation marks.
-5. Scripts read naturally aloud (no markdown artifacts, no parentheticals).
+1. Comprehension (the prime directive): every script and payload is clear, natural, and self-contained for a viewer with zero context. Flag anything that requires prior knowledge, is packed too dense to follow aloud, or reads like a compressed telegram.
+2. Pacing judgment: ~${BUDGETS.slideTargetSeconds}s per slide is the aim. A slide running 7-10s is acceptable IF the extra time is earning its keep in clarity. Fail pacing only when a slide is long AND could be split cleanly or tightened without losing meaning — and then prescribe the split, not blind cuts.
+3. Character budgets: title ≤ ${BUDGETS.titleMaxChars} chars; standard body ≤ ${BUDGETS.bodyMaxChars} chars; grid descriptions ≤ 110 chars; code lines ≤ 64 chars.
+4. Total runtime: all narration (cover + slides + outro) between ${BUDGETS.narration.minSeconds} and ${BUDGETS.narration.maxSeconds} seconds.
+5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use image URLs that actually appear in the PR description.
+6. Layout fit: metrics values are real quantities from the PR; code lines are text a user would literally type into the product (not source code); grid items are genuinely minor; comparison only used when before/after images exist.
+7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud.
 
-Return pass=true only if ALL checks pass. Notes must be actionable instructions for the copywriter (e.g. "slide 2 body is 380 chars — cut the last sentence"), not observations.`;
+Return pass=true only if ALL checks pass. Notes must be actionable instructions, not observations — and never instructions that trade clarity for brevity.`;
 }

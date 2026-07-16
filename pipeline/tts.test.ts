@@ -38,12 +38,41 @@ describe("synthesize", () => {
     expect(wav.length).toBe(44 + 4800);
   });
 
-  it("throws with the API error body on non-200", async () => {
+  it("retries a 429 after the API's suggested delay, then succeeds", async () => {
+    const rateLimited = {
+      ok: false,
+      status: 429,
+      text: async () => '{"error": {"details": [{"retryDelay": "12s"}]}}',
+    };
+    const fetchImpl = vi
+      .fn()
+      .mockResolvedValueOnce(rateLimited as unknown as Response)
+      .mockResolvedValueOnce(fakeResponse as unknown as Response);
+    const sleeps: number[] = [];
+    const sleepImpl = async (ms: number) => void sleeps.push(ms);
+    const wav = await synthesize("x", { model: "m", voice: "v", apiKey: "k", fetchImpl, sleepImpl });
+    expect(sleeps).toEqual([13000]); // 12s suggested + 1s margin
+    expect(fetchImpl).toHaveBeenCalledTimes(2);
+    expect(wav.subarray(0, 4).toString("ascii")).toBe("RIFF");
+  });
+
+  it("throws with the API error body on non-retryable errors", async () => {
     const fetchImpl = vi.fn(
-      async () => ({ ok: false, status: 429, text: async () => "quota" }) as unknown as Response,
+      async () => ({ ok: false, status: 500, text: async () => "boom" }) as unknown as Response,
     );
     await expect(
       synthesize("x", { model: "m", voice: "v", apiKey: "k", fetchImpl }),
-    ).rejects.toThrow(/429[\s\S]*quota/);
+    ).rejects.toThrow(/500[\s\S]*boom/);
+  });
+
+  it("gives up after exhausting 429 retries", async () => {
+    const fetchImpl = vi.fn(
+      async () => ({ ok: false, status: 429, text: async () => '{"retryDelay": "1s"}' }) as unknown as Response,
+    );
+    const sleepImpl = async () => {};
+    await expect(
+      synthesize("x", { model: "m", voice: "v", apiKey: "k", fetchImpl, sleepImpl }),
+    ).rejects.toThrow(/429/);
+    expect(fetchImpl).toHaveBeenCalledTimes(4); // initial + 3 retries
   });
 });

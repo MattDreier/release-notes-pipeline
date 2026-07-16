@@ -5,24 +5,46 @@ import type { Manifest } from "./manifest";
 import { pcmToWav } from "./wav";
 
 type FetchLike = (url: string, init?: RequestInit) => Promise<Response>;
-type TtsCfg = { model: string; voice: string; apiKey: string; fetchImpl?: FetchLike };
+type TtsCfg = {
+  model: string;
+  voice: string;
+  apiKey: string;
+  fetchImpl?: FetchLike;
+  sleepImpl?: (ms: number) => Promise<void>;
+};
+
+const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
+
+/** Parse the retry delay (seconds) out of a Gemini 429 body; default 60s. */
+export function parseRetryDelaySeconds(body: string): number {
+  const m = body.match(/"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"/);
+  return m ? Math.ceil(Number(m[1])) + 1 : 60;
+}
 
 export async function synthesize(
   text: string,
-  { model, voice, apiKey, fetchImpl = fetch }: TtsCfg,
+  { model, voice, apiKey, fetchImpl = fetch, sleepImpl = defaultSleep }: TtsCfg,
 ): Promise<Buffer> {
   const url = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`;
-  const res = await fetchImpl(url, {
-    method: "POST",
-    headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
-    body: JSON.stringify({
-      contents: [{ parts: [{ text }] }],
-      generationConfig: {
-        responseModalities: ["AUDIO"],
-        speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
-      },
-    }),
-  });
+  let res: Response;
+  for (let attempt = 0; ; attempt++) {
+    res = await fetchImpl(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
+      body: JSON.stringify({
+        contents: [{ parts: [{ text }] }],
+        generationConfig: {
+          responseModalities: ["AUDIO"],
+          speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
+        },
+      }),
+    });
+    if (res.status !== 429 || attempt >= 3) break;
+    // Free-tier rate limit (3 requests/min) — wait what the API asks, then retry.
+    const wait = parseRetryDelaySeconds(await res.text());
+    console.error(`  ⏳ TTS rate-limited; retrying in ${wait}s (attempt ${attempt + 1}/3)`);
+    await sleepImpl(wait * 1000);
+  }
   if (!res.ok) throw new Error(`Gemini TTS ${res.status}: ${await res.text()}`);
   const json = (await res.json()) as {
     candidates?: { content?: { parts?: { inlineData?: { data?: string } }[] } }[];

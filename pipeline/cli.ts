@@ -32,12 +32,34 @@ console.error(`gathering ${values.repo}#${values.pr}…`);
 const bundle = await gatherPr(values.repo, Number(values.pr));
 const config = loadRepoConfig(bundle.configJson, values.repo.split("/")[1]);
 
+/** Download any remote comparison screenshots into video/public/images/. */
+async function localizeImages(m: Manifest): Promise<void> {
+  for (const [i, slide] of m.slides.entries()) {
+    if (slide.layout !== "comparison" || !slide.beforeAfter) continue;
+    for (const key of ["before", "after"] as const) {
+      const src = slide.beforeAfter[key];
+      if (!/^https?:\/\//.test(src)) continue; // already local
+      const res = await fetch(src, {
+        headers: process.env.GH_TOKEN ? { authorization: `Bearer ${process.env.GH_TOKEN}` } : {},
+      });
+      if (!res.ok) throw new Error(`failed to download ${key} screenshot (${res.status}): ${src}`);
+      const ext = (res.headers.get("content-type") ?? "").includes("jpeg") ? "jpg" : "png";
+      const rel = `images/slide${i + 1}-${key}.${ext}`;
+      await mkdir(join(publicDir, "images"), { recursive: true });
+      await Bun.write(join(publicDir, rel), await res.arrayBuffer());
+      slide.beforeAfter[key] = rel;
+      console.error(`  🖼  ${rel}`);
+    }
+  }
+}
+
 let manifest: Manifest;
 if (values["skip-agent"]) {
   manifest = JSON.parse(await Bun.file(manifestPath).text());
   console.error("reusing existing manifest.json");
 } else {
   manifest = await generateManifest(bundle, config);
+  await localizeImages(manifest);
   await mkdir(publicDir, { recursive: true });
   await writeFile(manifestPath, JSON.stringify(manifest, null, 2));
   console.error(`manifest: ${manifest.slides.length} slide(s)`);

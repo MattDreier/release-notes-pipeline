@@ -3,9 +3,18 @@ import { Audio, staticFile, useCurrentFrame } from "remotion";
 import { fadeOutAtEnd, fadeUp } from "./anim";
 import { Layout } from "./Layout";
 import { SafeAreaGuard } from "./SafeAreaGuard";
-import { contentBodySize, contentTitleSize } from "./sizing";
+import { contentTitleSize } from "./sizing";
+import { CodeBody, ComparisonBody, GridBody, MetricsBody, StandardBody } from "./templates";
 import type { Manifest } from "./types";
-import { fonts, theme } from "./theme";
+import { categoryColors, fonts, theme } from "./theme";
+
+const BODIES = {
+  standard: StandardBody,
+  metrics: MetricsBody,
+  code: CodeBody,
+  comparison: ComparisonBody,
+  grid: GridBody,
+} as const;
 
 export const ContentSlide: React.FC<{
   manifest: Manifest;
@@ -14,9 +23,11 @@ export const ContentSlide: React.FC<{
 }> = ({ manifest, index, durationInFrames }) => {
   const frame = useCurrentFrame();
   const slide = manifest.slides[index];
-  const titleSize = contentTitleSize(slide.title);
-  const body = contentBodySize(slide.body);
   const exit = fadeOutAtEnd(frame, durationInFrames);
+  // Card-based layouts need vertical room — cap their title size.
+  const titleSize =
+    slide.layout === "standard" ? contentTitleSize(slide.title) : Math.min(contentTitleSize(slide.title), 110);
+  const Body = BODIES[slide.layout];
 
   return (
     <Layout
@@ -29,7 +40,14 @@ export const ContentSlide: React.FC<{
       <SafeAreaGuard slide={`content ${index + 1}`} />
       <div data-safe style={{ position: "absolute", left: 96, top: 180, right: 96, opacity: exit }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18, ...fadeUp(frame, 4, 14, 18) }}>
-          <div style={{ width: 14, height: 14, borderRadius: "50%", background: theme.accent }} />
+          <div
+            style={{
+              width: 14,
+              height: 14,
+              borderRadius: "50%",
+              background: categoryColors[slide.type] ?? theme.accent,
+            }}
+          />
           <span
             style={{
               fontFamily: fonts.sans,
@@ -57,20 +75,7 @@ export const ContentSlide: React.FC<{
         >
           {slide.title}
         </div>
-        <div
-          style={{
-            fontFamily: fonts.serif,
-            fontStyle: "italic",
-            fontSize: body.fontSize,
-            color: theme.muted,
-            lineHeight: body.lineHeight,
-            marginTop: 56,
-            maxWidth: 1500,
-            ...fadeUp(frame, 22),
-          }}
-        >
-          {slide.body}
-        </div>
+        <Body slide={slide} />
       </div>
     </Layout>
   );

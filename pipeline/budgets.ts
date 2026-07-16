@@ -3,8 +3,32 @@ export const BUDGETS = {
   bodyMaxChars: 320,
   wordsPerSecond: 2.5, // ~150 spoken wpm
   narration: { minSeconds: 28, maxSeconds: 55 }, // + padding ⇒ 30–60s video
-  maxSlides: 3,
+  maxSlides: 6,
+  slideTargetSeconds: 6, // the AIM: one digestible idea per slide
+  slideMaxSeconds: 12, // outlier guard only — clarity may stretch a slide well past the 6s target
 } as const;
+
+/**
+ * Per-slide pacing check — an OUTLIER guard, not the pacing enforcer.
+ * ~6s is the target, but effective communication outranks pacing; a slide is
+ * only bounced locally when it's so long that splitting is clearly warranted.
+ * The judgment call between 6 and 12 seconds belongs to the critic agent.
+ */
+export function slidePacingCheck(scripts: string[]): { ok: boolean; reason?: string } {
+  const over = scripts
+    .map((s, i) => ({ i, seconds: estimateSpokenSeconds(s) }))
+    .filter((x) => x.seconds > BUDGETS.slideMaxSeconds);
+  if (over.length === 0) return { ok: true };
+  return {
+    ok: false,
+    reason: over
+      .map(
+        (x) =>
+          `slide ${x.i + 1} narration ~${x.seconds.toFixed(1)}s is far past the ~${BUDGETS.slideTargetSeconds}s target — split it into two slides (do NOT compress the wording at the cost of clarity)`,
+      )
+      .join("; "),
+  };
+}
 
 export const fitsTitle = (s: string) => s.length <= BUDGETS.titleMaxChars;
 export const fitsBody = (s: string) => s.length <= BUDGETS.bodyMaxChars;

@@ -10,6 +10,7 @@ const bundle: PrBundle = {
   labels: ["feature"],
   mergedAt: "2026-07-15T00:00:00Z",
   diff: "diff --git a/x b/x\n+code",
+  images: ["https://github.com/user-attachments/assets/before.png"],
   configJson: undefined,
 };
 
@@ -23,12 +24,19 @@ const config: RepoConfig = {
 };
 
 describe("prompt builders", () => {
-  it("editor prompt embeds diff, PR metadata, and slide/runtime budgets", () => {
+  it("editor prompt embeds diff, PR metadata, layouts, images, and budgets", () => {
     const p = editorPrompt(bundle, config);
     expect(p).toContain("feat: map routing");
     expect(p).toContain("+code");
-    expect(p).toContain("1-3"); // slide count constraint stated
+    expect(p).toContain("1-6"); // slide count constraint stated
     expect(p).toContain("28"); // runtime budget stated
+    expect(p).toContain("~6 SECONDS"); // per-slide pacing target stated
+    expect(p).toContain("effective communication outranks pacing"); // clarity supremacy stated
+    expect(p).toContain("NON-TECHNICAL"); // audience stated
+    for (const layout of ["standard", "metrics", "code", "comparison", "grid"]) {
+      expect(p).toContain(`"${layout}"`);
+    }
+    expect(p).toContain("before.png"); // available screenshots listed
   });
 
   it("copy prompt states hard character budgets", () => {
