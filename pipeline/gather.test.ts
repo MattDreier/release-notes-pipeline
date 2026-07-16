@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractImageUrls, isNoiseFile, truncateDiff } from "./gather";
+import { extractImageUrls, isNoiseFile, isTransientGhError, truncateDiff } from "./gather";
 
 describe("extractImageUrls", () => {
   it("finds markdown and html images, deduped", () => {
@@ -57,5 +57,20 @@ describe("truncateDiff", () => {
     const out = truncateDiff(big, 5_000);
     expect(out.length).toBeLessThanOrEqual(5_100);
     expect(out).toContain("[diff truncated");
+  });
+});
+
+describe("isTransientGhError", () => {
+  it("matches GitHub 5xx and connection-level failures", () => {
+    expect(isTransientGhError("could not find pull request diff: HTTP 503: 503 Service Unavailable (https://api.github.com/...)")).toBe(true);
+    expect(isTransientGhError("HTTP 502: Bad Gateway")).toBe(true);
+    expect(isTransientGhError("Gateway Timeout")).toBe(true);
+    expect(isTransientGhError("read: connection reset by peer")).toBe(true);
+  });
+
+  it("fails fast on auth and not-found errors", () => {
+    expect(isTransientGhError("HTTP 401: Bad credentials")).toBe(false);
+    expect(isTransientGhError("HTTP 404: Not Found")).toBe(false);
+    expect(isTransientGhError("GraphQL: Could not resolve to a PullRequest")).toBe(false);
   });
 });
