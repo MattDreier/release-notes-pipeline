@@ -113,7 +113,7 @@ These targets keep slides digestible, but they are AIMS, not ceilings. If hittin
 
 ## Delivery tags (optional — ration them)
 
-The narrator voice already has a calm, warm editorial baseline. You MAY sharpen delivery with ONE inline tag per script, chosen ONLY from: [warmly] [brightly] [serious] [thoughtfully] [with quiet excitement] [slower]. Place it at the start of the sentence it colors. The default is NO tag — add one only when it genuinely improves how the sentence lands (e.g. [serious] before a breaking-change warning, [with quiet excitement] on a flagship feature). Never use theatrical tags (laughing, whispering, shouting, accents) — this is a product update, not a performance.
+The narrator's default read is the baseline, and BETWEEN-SLIDE CONSISTENCY IS SACRED — every tag creates a local deviation from it, so ration hard. You MAY sharpen delivery with AT MOST ONE inline tag per script, chosen ONLY from: [warmly] [brightly] [serious] [thoughtfully] [with quiet excitement] [slower]. Place it at the start of the sentence it colors. The default is NO tag — add one only when the content genuinely calls for a different human register (e.g. [serious] before a breaking-change warning, [with quiet excitement] on a flagship feature). Never use theatrical tags (laughing, whispering, shouting, accents) — this is a product update, not a performance.
 
 Return one script string per slide, in order, plus cover and outro.`;
 }

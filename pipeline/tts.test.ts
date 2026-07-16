@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { NARRATOR_STYLE, synthesize } from "./tts";
+import { synthesize } from "./tts";
 
 const pcmBase64 = Buffer.alloc(4800).toString("base64");
 const fakeResponse = {
@@ -33,10 +33,10 @@ describe("synthesize", () => {
     const body = JSON.parse(init.body as string);
     expect(body.generationConfig.responseModalities).toEqual(["AUDIO"]);
     expect(body.generationConfig.speechConfig.voiceConfig.prebuiltVoiceConfig.voiceName).toBe("Charon");
-    // Every clip carries the editorial director's note, then the transcript.
-    expect(body.contents[0].parts[0].text).toBe(NARRATOR_STYLE + "Hello world");
-    expect(NARRATOR_STYLE).toContain("calm, warm, confident editorial narrator");
-    expect(NARRATOR_STYLE).toContain("delivery direction, not words to speak");
+    // The script is sent BARE — no prepended style prompt. Per-clip style
+    // notes are re-interpreted independently per TTS call and create audible
+    // pace/tone seams between slides; the default read is the consistent one.
+    expect(body.contents[0].parts[0].text).toBe("Hello world");
     expect(wav.subarray(0, 4).toString("ascii")).toBe("RIFF");
     expect(wav.length).toBe(44 + 4800);
   });

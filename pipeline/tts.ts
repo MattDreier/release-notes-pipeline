@@ -15,21 +15,13 @@ type TtsCfg = {
 
 const defaultSleep = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
-/**
- * Director's note prepended to every clip. This is the baseline delivery-
- * quality lever: without it the model picks an arbitrary default read.
- * Kept deliberately restrained — the register is premium documentary,
- * not advertisement. Scripts may additionally carry at most one inline
- * delivery tag (see voicePrompt's allowlist).
- */
-export const NARRATOR_STYLE = `You are narrating a short, minimalist product release-notes video.
-
-Delivery: a calm, warm, confident editorial narrator — premium documentary register. Quietly enthusiastic, never salesy, never breathless. Measured pace, natural pauses at punctuation, clean crisp diction.
-
-Read ONLY the transcript below aloud. Anything in [square brackets] is a delivery direction, not words to speak.
-
-TRANSCRIPT:
-`;
+// NO style prompt is prepended — deliberately. Each clip is a separate TTS
+// call (per-clip audio duration is what drives Remotion's slide timing), and
+// a prepended director's note gets re-interpreted independently per call,
+// producing audible pace/tone/volume seams BETWEEN slides (live regression,
+// 2026-07-16). The voice's bare default read is tight and consistent across
+// calls; context-aware delivery comes only from sparse inline tags like
+// [serious], which the model understands natively inside the script text.
 
 /** Parse the retry delay (seconds) out of a Gemini 429 body; default 60s. */
 export function parseRetryDelaySeconds(body: string): number {
@@ -48,7 +40,7 @@ export async function synthesize(
       method: "POST",
       headers: { "content-type": "application/json", "x-goog-api-key": apiKey },
       body: JSON.stringify({
-        contents: [{ parts: [{ text: NARRATOR_STYLE + text }] }],
+        contents: [{ parts: [{ text }] }],
         generationConfig: {
           responseModalities: ["AUDIO"],
           speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } },
