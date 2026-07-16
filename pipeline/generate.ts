@@ -195,22 +195,46 @@ export async function generateManifest(
   { runQuery = runAgentQuery }: { runQuery?: RunQuery } = {},
 ): Promise<GenerationResult> {
   let notes: string[] = [];
+  // Revision context: critic notes are indexical ("Slide 3's second sentence…"),
+  // so revision passes must SEE the draft the notes refer to. Without it each
+  // cycle re-invents the manifest from the PR bundle alone — which is how a
+  // near-approved draft regresses (run history: a cycle re-added 31 words and
+  // re-introduced wording an earlier cycle had already corrected).
+  let prevDraft: string | null = null;
+  const revisionContext = () =>
+    prevDraft
+      ? `\n\nPREVIOUS DRAFT — the REVISION NOTES below refer to THIS draft (its slide numbers, its quoted sentences). Treat it as the baseline: keep every title, script, and body the notes do NOT flag verbatim; change only what the notes call out. Do not re-invent unflagged content.\n${prevDraft}`
+      : "";
   let plan: Plan | undefined;
-  for (let attempt = 0; attempt < 3; attempt++) {
-    // The editor re-plans on revision cycles too — critic notes are often
-    // structural ("split this into two slides"), which only the plan can fix;
-    // freezing the plan after pass 1 made such notes impossible to apply.
-    // Final attempt = SAFE MODE: stop iterating on ambition, collapse to the
-    // simplest form that stays clear. An "Also Fixed"-style grid or a single
-    // standard slide is the escape hatch — shorter and plainer beats clever.
+  // Four attempts: an ambitious draft, one revision, then TWO safe-mode passes.
+  // The editor re-plans on revision cycles too — critic notes are often
+  // structural ("split this into two slides"), which only the plan can fix;
+  // freezing the plan after pass 1 made such notes impossible to apply.
+  // SAFE MODE collapses to <=3 slides to clear the runtime ceiling. Dense PRs
+  // converge structurally on the FIRST safe pass but pick up fresh wording
+  // notes on the collapsed draft — so a SECOND safe pass exists purely to apply
+  // those notes within the collapsed shape (otherwise the run throws one polish
+  // cycle short of a good, in-budget video).
+  const MAX_ATTEMPTS = 4;
+  const SAFE_MODE_FROM = 2;
+  for (let attempt = 0; attempt < MAX_ATTEMPTS; attempt++) {
     const safeMode =
-      attempt === 2
-        ? `\n\nSAFE MODE — FINAL ATTEMPT. Two drafts have failed review. Do not iterate on the previous plan: simplify aggressively instead. Strip to the essential story in its simplest form — one or two "standard" slides (a problem → fix pair is fine and often clearer than one packed slide), or one "grid" slide bundling small items. Never pack two distinct beats into a single slide to save a slide. Use the plainest language available. A short, modest, obviously-true video that a stranger understands is the goal; ambition is not.`
+      attempt >= SAFE_MODE_FROM
+        ? `\n\nSAFE MODE. Earlier drafts failed review. Your goal is to FIT the two hard narration budgets, which are measured in WORDS — slide count is NOT the lever (packing ideas into fewer slides makes each slide fail the per-slide gate):
+- TOTAL: all narration together (cover + every slide + outro) must stay under ~135 words (~50s at the measured ~2.7 words/sec pace; the hard ceiling is 55s).
+- PER SLIDE: no slide's script may exceed ~25 words (~10s; the hard per-slide gate is 12s). More short slides beat fewer packed ones — one idea per slide, up to the 6-slide maximum.
+To fit the total budget, cut framing before substance: keep the cover and outro scripts to one short sentence each, then keep only the 2–4 MOST newsworthy items as their own "standard" slides and bundle the remaining minor items into ONE "grid" slide (a grid slide REQUIRES the gridItems payload — one item per bundled change, and its script gets one short clause per item). If REVISION NOTES above propose concrete replacement titles or scripts, adopt them verbatim unless they break a budget — do not re-invent what the reviewer already fixed. Use the plainest language available. A short, modest, obviously-true video that a stranger understands is the goal; ambition is not.`
         : "";
-    console.error(`pass 1/4: editor${attempt === 2 ? " (SAFE MODE)" : attempt ? ` (revision ${attempt})` : ""}`);
+    const attemptLabel =
+      attempt >= SAFE_MODE_FROM
+        ? ` (SAFE MODE${attempt > SAFE_MODE_FROM ? ` revision ${attempt - SAFE_MODE_FROM}` : ""})`
+        : attempt
+          ? ` (revision ${attempt})`
+          : "";
+    console.error(`pass 1/4: editor${attemptLabel}`);
     plan = (await runQuery(
       editorPrompt(bundle, config) +
-        (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : "") +
+        (notes.length ? `${revisionContext()}\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : "") +
         safeMode,
       PLAN_SCHEMA,
     )) as Plan;
@@ -219,7 +243,7 @@ export async function generateManifest(
     console.error(`pass 2/4: copywriter${attempt ? ` (revision ${attempt})` : ""}`);
     const copy = (await runQuery(
       copyPrompt(plan, bundle) +
-        (notes.length ? `\n\nREVISION NOTES (fix these):\n- ${notes.join("\n- ")}` : ""),
+        (notes.length ? `${revisionContext()}\n\nREVISION NOTES (fix these):\n- ${notes.join("\n- ")}` : ""),
       COPY_SCHEMA,
     )) as Copy;
 
@@ -228,7 +252,7 @@ export async function generateManifest(
     // written here, so critic feedback about them must reach this pass.
     const voice = (await runQuery(
       voicePrompt(copy, plan) +
-        (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern scripts):\n- ${notes.join("\n- ")}` : ""),
+        (notes.length ? `${revisionContext()}\n\nREVISION NOTES from the previous cycle (apply any that concern scripts):\n- ${notes.join("\n- ")}` : ""),
       VOICE_SCHEMA,
     )) as Voice;
 
@@ -272,6 +296,18 @@ export async function generateManifest(
       },
     };
 
+    // Snapshot for the next cycle's revision context (agent-written content
+    // only — same scope the critic judges).
+    prevDraft = JSON.stringify(
+      {
+        cover: { script: draft.cover.script },
+        slides: draft.slides,
+        outro: { script: draft.outro.script },
+      },
+      null,
+      1,
+    );
+
     // Local hard checks first (free), then the critic pass (agent).
     const localBudget = narrationBudgetCheck([
       draft.cover.script,
@@ -305,5 +341,5 @@ export async function generateManifest(
     ];
     console.error(`  ✗ revision cycle ${attempt + 1}: ${notes.join(" | ")}`);
   }
-  throw new Error(`manifest failed validation after 2 revision cycles: ${notes.join(" | ")}`);
+  throw new Error(`manifest failed validation after ${MAX_ATTEMPTS - 1} revision cycles: ${notes.join(" | ")}`);
 }
