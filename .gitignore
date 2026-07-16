@@ -1,0 +1,5 @@
+.env
+node_modules/
+out/
+video/public/audio/
+video/public/manifest.json
