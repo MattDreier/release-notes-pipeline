@@ -1,7 +1,12 @@
 export const BUDGETS = {
   titleMaxChars: 48, // 2 lines × ~24 chars in the huge serif
   bodyMaxChars: 320,
-  wordsPerSecond: 2.5, // ~150 spoken wpm
+  // Empirically calibrated (2026-07-16): a shipped-style render measured 103
+  // words across 36.3s of actual Gemini TTS audio = 2.84 w/s (~170 wpm)
+  // including per-clip pauses. 2.7 keeps ~5% safety margin below that. The
+  // previous guess of 2.5 (150 wpm) ran ~14% slow and made the ceiling check
+  // bounce critic-clean drafts that would really have rendered at ~49-52s.
+  wordsPerSecond: 2.7,
   // 30-60s is the AIM for a typical PR. There is NO enforced minimum — a small
   // infra/docs PR fully told in 15s ships at 15s; padding to a floor is
   // anti-communication. Only the ceiling is hard (attention + cost guard).

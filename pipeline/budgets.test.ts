@@ -20,15 +20,15 @@ describe("budgets", () => {
     expect(fitsBody("x".repeat(321))).toBe(false);
   });
 
-  it("estimates spoken duration at 150 wpm", () => {
+  it("estimates spoken duration from the calibrated pace constant", () => {
     const thirtyWords = Array(30).fill("word").join(" ");
-    expect(estimateSpokenSeconds(thirtyWords)).toBeCloseTo(12, 0); // 30 / 2.5
+    expect(estimateSpokenSeconds(thirtyWords)).toBeCloseTo(30 / BUDGETS.wordsPerSecond, 5);
   });
 
   it("strips delivery tags before timing — tags direct the voice, they are not spoken", () => {
-    // 10 words + a tag ⇒ still 10 words ⇒ 4s at 2.5 wps
+    // 10 words + a tag ⇒ still timed as 10 words
     const script = "[with quiet excitement] one two three four five six seven eight nine ten";
-    expect(estimateSpokenSeconds(script)).toBe(4);
+    expect(estimateSpokenSeconds(script)).toBeCloseTo(10 / BUDGETS.wordsPerSecond, 5);
     expect(stripDeliveryTags("[serious] Heads up. [slower] It changed.")).toBe(
       "Heads up. It changed.",
     );
