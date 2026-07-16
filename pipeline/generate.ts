@@ -5,6 +5,7 @@ import { dateVersion } from "./config";
 import type { PrBundle } from "./gather";
 import { validateManifest, type Manifest } from "./manifest";
 import { copyPrompt, criticPrompt, editorPrompt, voicePrompt } from "./prompts";
+import { versionForPr } from "./version";
 
 export type RunQuery = (prompt: string, schema: Record<string, unknown>) => Promise<unknown>;
 
@@ -193,8 +194,6 @@ export async function generateManifest(
   config: RepoConfig,
   { runQuery = runAgentQuery }: { runQuery?: RunQuery } = {},
 ): Promise<GenerationResult> {
-  const version = dateVersion(new Date(bundle.mergedAt));
-
   let notes: string[] = [];
   let plan: Plan | undefined;
   for (let attempt = 0; attempt < 3; attempt++) {
@@ -232,6 +231,15 @@ export async function generateManifest(
         (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern scripts):\n- ${notes.join("\n- ")}` : ""),
       VOICE_SCHEMA,
     )) as Voice;
+
+    // Semver is descriptive: the bump falls out of this attempt's classified
+    // contents (breaking → major, feature → minor, fix/improvement → patch),
+    // with the previous version read from the target repo's CHANGELOG. A PR
+    // that already has a changelog section reuses its version (idempotent).
+    const version =
+      config.version === "semver"
+        ? versionForPr(bundle.changelog, bundle.number, plan.technical)
+        : dateVersion(new Date(bundle.mergedAt));
 
     const draft = {
       product: config.product,

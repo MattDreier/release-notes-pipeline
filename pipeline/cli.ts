@@ -42,6 +42,16 @@ console.error(`gathering ${values.repo}#${values.pr}…`);
 const bundle = await gatherPr(values.repo, Number(values.pr));
 const config = loadRepoConfig(bundle.configJson, values.repo.split("/")[1]);
 
+// Semver reads the previous version from the changelog; the local checkout
+// is authoritative in --target mode (it may be ahead of the GitHub API copy).
+if (values.target) {
+  try {
+    bundle.changelog = await readFile(join(values.target, "CHANGELOG.md"), "utf8");
+  } catch {
+    /* no local changelog yet — keep the fetched copy (or null) */
+  }
+}
+
 /** Download any remote comparison screenshots into video/public/images/. */
 async function localizeImages(m: Manifest): Promise<void> {
   for (const [i, slide] of m.slides.entries()) {

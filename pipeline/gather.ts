@@ -41,6 +41,10 @@ export type PrBundle = {
   diff: string;
   images: string[];
   configJson: unknown;
+  /** Target repo's CHANGELOG.md on the default branch (null if absent).
+   * Source of the previous semver version; the CLI overrides this with the
+   * local checkout's copy in --target mode, which may be ahead of GitHub. */
+  changelog: string | null;
 };
 
 async function gh(args: string[]): Promise<string> {
@@ -58,13 +62,17 @@ export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
     await gh(["pr", "view", String(pr), "--repo", repo, "--json", "number,title,body,labels,mergedAt"]),
   );
   const diff = truncateDiff(await gh(["pr", "diff", String(pr), "--repo", repo]));
-  let configJson: unknown;
-  try {
-    const raw = await gh(["api", `/repos/${repo}/contents/.release-notes.json`, "--jq", ".content"]);
-    configJson = JSON.parse(Buffer.from(raw.trim(), "base64").toString("utf8"));
-  } catch {
-    configJson = undefined; // no config file — defaults apply
-  }
+  const fetchFile = async (path: string): Promise<string | null> => {
+    try {
+      const raw = await gh(["api", `/repos/${repo}/contents/${path}`, "--jq", ".content"]);
+      return Buffer.from(raw.trim(), "base64").toString("utf8");
+    } catch {
+      return null; // file absent
+    }
+  };
+  const configRaw = await fetchFile(".release-notes.json");
+  const configJson = configRaw === null ? undefined : JSON.parse(configRaw);
+  const changelog = await fetchFile("CHANGELOG.md");
   return {
     repo,
     number: viewJson.number,
@@ -75,5 +83,6 @@ export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
     diff,
     images: extractImageUrls(viewJson.body ?? ""),
     configJson,
+    changelog,
   };
 }

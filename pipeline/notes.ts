@@ -11,7 +11,7 @@ import type { Manifest } from "./manifest";
 export type Category = "FEATURE" | "IMPROVEMENT" | "FIX" | "BREAKING CHANGE";
 export type TechnicalItem = { category: Category; bullet: string };
 
-const CHANGELOG_HEADER = `# Changelog
+export const CHANGELOG_HEADER = `# Changelog
 
 All notable changes to this project are documented here, newest first.
 Entries are generated automatically from merged pull requests by

@@ -13,6 +13,7 @@ const bundle: PrBundle = {
   diff: "diff --git a/x b/x\n+code",
   images: ["https://github.com/user-attachments/assets/before.png"],
   configJson: undefined,
+  changelog: null,
 };
 
 const config: RepoConfig = {
