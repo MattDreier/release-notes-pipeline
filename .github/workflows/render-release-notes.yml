@@ -22,7 +22,8 @@ jobs:
   render:
     runs-on: ubuntu-latest
     permissions:
-      contents: write # the default GITHUB_TOKEN can be read-only; the commit step needs write
+      contents: write # commit the video + notes back to the target repo
+      pull-requests: read # gather runs `gh pr view`/`gh pr diff`; a permissions block zeroes every unlisted scope
     steps:
       - name: Check out release-notes-pipeline
         uses: actions/checkout@v4
