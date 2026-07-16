@@ -76,11 +76,18 @@ async function gh(args: string[]): Promise<string> {
   throw new Error(`gh ${args[0]} failed: ${lastErr}`);
 }
 
-export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
+export async function gatherPr(
+  repo: string,
+  pr: number,
+  // Escape hatch for when GitHub's REST diff endpoint is unavailable (it can
+  // be down while GraphQL stays healthy — live incident 2026-07-16): a squash
+  // merge's `git show <sha> --format=` produces the identical diff locally.
+  { diffOverride }: { diffOverride?: string } = {},
+): Promise<PrBundle> {
   const viewJson = JSON.parse(
     await gh(["pr", "view", String(pr), "--repo", repo, "--json", "number,title,body,labels,mergedAt"]),
   );
-  const diff = truncateDiff(await gh(["pr", "diff", String(pr), "--repo", repo]));
+  const diff = truncateDiff(diffOverride ?? (await gh(["pr", "diff", String(pr), "--repo", repo])));
   const fetchFile = async (path: string): Promise<string | null> => {
     try {
       const raw = await gh(["api", `/repos/${repo}/contents/${path}`, "--jq", ".content"]);
