@@ -21,6 +21,14 @@ export const runAgentQuery: RunQuery = async (prompt, schema) => {
       if (message.subtype !== "success") {
         throw new Error(`agent query failed: ${message.subtype}`);
       }
+      if (message.structured_output === undefined) {
+        // A "success" result with no structured output usually means the CLI
+        // answered with plain text instead of running the task — e.g. a usage-
+        // limit notice. Surface that text; a silent undefined crashes later
+        // with a useless TypeError.
+        const text = "result" in message ? String(message.result).slice(0, 300) : "(no result text)";
+        throw new Error(`agent query returned no structured output; result text: ${text}`);
+      }
       return message.structured_output;
     }
   }
