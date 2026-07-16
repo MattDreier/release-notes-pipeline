@@ -1,9 +1,11 @@
 import { parseArgs } from "node:util";
 import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
+import { estimateSpokenSeconds } from "./budgets";
 import { gatherPr } from "./gather";
 import { loadRepoConfig } from "./config";
 import { generateManifest } from "./generate";
+import { GenerationExhausted, measureClips, writeRunRecord, type RunRecord } from "./runlog";
 import { synthesizeManifest } from "./tts";
 import type { Manifest } from "./manifest";
 import {
@@ -81,6 +83,18 @@ async function localizeImages(m: Manifest): Promise<void> {
   }
 }
 
+// Run ledger — one record per live editorial run (skip-agent re-runs have no
+// cycles to record). Persisted on success AND exhaustion; the retained drafts
+// are the substrate for offline evals.
+const startedAt = new Date().toISOString();
+const recordConfig = {
+  product: config.product,
+  version: config.version,
+  voice: config.voice,
+  ttsModel: config.ttsModel,
+};
+let runRecord: RunRecord | null = null;
+
 let manifest: Manifest;
 let technical: TechnicalItem[] = [];
 if (values["skip-agent"]) {
@@ -90,9 +104,39 @@ if (values["skip-agent"]) {
   manifest = saved;
   console.error("reusing existing manifest.json");
 } else {
-  const result = await generateManifest(bundle, config);
+  let result;
+  try {
+    result = await generateManifest(bundle, config);
+  } catch (e) {
+    if (e instanceof GenerationExhausted) {
+      const path = await writeRunRecord(root, {
+        repo: values.repo,
+        pr: Number(values.pr),
+        config: recordConfig,
+        startedAt,
+        finishedAt: new Date().toISOString(),
+        outcome: { status: "exhausted", attempts: e.attempts.length, finalNotes: e.finalNotes },
+        attempts: e.attempts,
+      });
+      console.error(`run ledger: ${path}`);
+    }
+    throw e;
+  }
   manifest = result.manifest;
   technical = result.technical;
+  runRecord = {
+    repo: values.repo,
+    pr: Number(values.pr),
+    config: recordConfig,
+    startedAt,
+    finishedAt: new Date().toISOString(),
+    outcome: {
+      status: "converged",
+      attempts: result.attempts.length,
+      version: manifest.version,
+    },
+    attempts: result.attempts,
+  };
   await localizeImages(manifest);
   await mkdir(publicDir, { recursive: true });
   // technical rides along in manifest.json so --skip-agent re-runs keep it;
@@ -104,6 +148,23 @@ if (values["skip-agent"]) {
 if (!values["skip-tts"]) {
   const files = await synthesizeManifest(manifest, config, join(publicDir, "audio"));
   console.error(`audio: ${files.length} files`);
+  if (runRecord) {
+    // Estimator self-audit: had this been recorded from day one, the 14%-slow
+    // pace constant would have been visible on the first shipped video.
+    const scripts = [manifest.cover.script, ...manifest.slides.map((s) => s.script), manifest.outro.script];
+    const clips = await measureClips(files);
+    runRecord.tts = {
+      estimatedSeconds: Number(scripts.reduce((t, s) => t + estimateSpokenSeconds(s), 0).toFixed(1)),
+      actualSeconds: Number(clips.reduce((t, c) => t + c.seconds, 0).toFixed(1)),
+      clips: clips.map((c) => ({ ...c, seconds: Number(c.seconds.toFixed(2)) })),
+    };
+    runRecord.finishedAt = new Date().toISOString();
+  }
+}
+
+if (runRecord) {
+  const path = await writeRunRecord(root, runRecord);
+  console.error(`run ledger: ${path}`);
 }
 
 console.error("rendering…");

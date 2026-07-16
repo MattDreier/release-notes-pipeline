@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 import type { RepoConfig } from "./config";
 import type { PrBundle } from "./gather";
 import { generateManifest, type RunQuery } from "./generate";
+import { GenerationExhausted } from "./runlog";
 
 const bundle: PrBundle = {
   repo: "acme/widgets",
@@ -89,12 +90,33 @@ describe("generateManifest revision loop", () => {
     // The approved manifest is cycle 2's draft.
     expect(result.manifest.slides[0].script).toBe("UNIQUE-SCRIPT-CYCLE-1 words here.");
     expect(result.technical).toEqual([{ category: "FIX", bullet: "fixed the frobnicator" }]);
+
+    // Ledger: both cycles retained, each with its full draft and gate verdicts.
+    expect(result.attempts).toHaveLength(2);
+    expect(result.attempts[0].gates.critic).toBe(false);
+    expect(result.attempts[0].criticNotes).toEqual(["Slide 1 body: say it plainly"]);
+    expect(result.attempts[1].gates).toEqual({ runtime: true, pacing: true, schema: true, critic: true });
+    const drafts = result.attempts.map((a) => JSON.stringify(a.draft));
+    expect(drafts[0]).toContain("UNIQUE-SCRIPT-CYCLE-0");
+    expect(drafts[1]).toContain("UNIQUE-SCRIPT-CYCLE-1");
+    for (const a of result.attempts) {
+      expect(Object.keys(a.passMs)).toEqual(["editor", "copywriter", "voiceover", "critic"]);
+    }
   });
 
-  it("throws after exhausting all attempts, carrying the final notes", async () => {
+  it("throws GenerationExhausted carrying every cycle's record", async () => {
     const reject = { pass: false, notes: ["still unclear"] };
     const { runQuery, calls } = fakeRunQuery([reject, reject, reject, reject]);
-    await expect(generateManifest(bundle, config, { runQuery })).rejects.toThrow(/still unclear/);
+    const err = await generateManifest(bundle, config, { runQuery }).then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(GenerationExhausted);
+    expect(err.message).toMatch(/still unclear/);
+    expect(err.attempts).toHaveLength(4);
+    expect(err.finalNotes).toEqual(["still unclear"]);
     expect(calls).toHaveLength(16); // 4 attempts × 4 passes
   });
 });
