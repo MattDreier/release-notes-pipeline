@@ -119,7 +119,13 @@ export async function generateManifest(
     )) as Copy;
 
     console.error("pass 3/4: voiceover");
-    const voice = (await runQuery(voicePrompt(copy, plan), VOICE_SCHEMA)) as Voice;
+    // Revision notes go to the voiceover pass too — the cover/outro scripts are
+    // written here, so critic feedback about them must reach this pass.
+    const voice = (await runQuery(
+      voicePrompt(copy, plan) +
+        (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern scripts):\n- ${notes.join("\n- ")}` : ""),
+      VOICE_SCHEMA,
+    )) as Voice;
 
     const draft = {
       product: config.product,

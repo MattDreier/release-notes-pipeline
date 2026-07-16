@@ -1,0 +1,24 @@
+{
+  "product": "dispatch-schedule-ui",
+  "version": "v2026.6.27",
+  "pr": 189,
+  "domain": "GITHUB.COM/DISPATCH-SCHEDULE-UI",
+  "brand": "DISPATCH-SCHEDULE-UI",
+  "cover": {
+    "script": "Here's what's new on the scheduling board. These release notes start with a drag and drop fix."
+  },
+  "slides": [
+    {
+      "type": "FIX",
+      "title": "The Snap-Back Flash, Gone",
+      "body": "Move a job onto another technician's lane and the block appears at its new time immediately. Before, the drop animation painted it back at its old time for a moment, with a duplicate lingering in the lane you dragged from. Both are gone. The confirm dialog now opens over a board that already reads correctly.",
+      "script": "Drag a job into another technician's lane and it lands where you put it. It stays there. The old animation used to snap the block back to its original time for a beat, and leave a ghost copy sitting in the lane you dragged from. Both of those are fixed. By the time the confirm dialog opens, the board underneath it already tells the truth."
+    }
+  ],
+  "outro": {
+    "headline": "dispatch-schedule-ui News",
+    "cta": "Subscribe",
+    "subline": "Full release notes at the link below.",
+    "script": "Full notes at the link below. Subscribe so you catch the next one."
+  }
+}
