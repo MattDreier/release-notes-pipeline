@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "generate": "bun pipeline/cli.ts",
+    "eval": "bun pipeline/eval.ts",
     "test": "vitest run",
     "video:studio": "remotion studio video/src/index.ts",
     "video:render": "remotion render video/src/index.ts ReleaseNotes out/release-notes.mp4",
