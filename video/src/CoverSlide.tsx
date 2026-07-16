@@ -1,6 +1,7 @@
 import React from "react";
 import { Audio, interpolate, spring, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
 import { Layout } from "./Layout";
+import { SafeAreaGuard } from "./SafeAreaGuard";
 import type { Manifest } from "./types";
 import { fonts, theme } from "./theme";
 
@@ -23,7 +24,8 @@ export const CoverSlide: React.FC<{ manifest: Manifest }> = ({ manifest }) => {
       bottomRight={manifest.brand}
     >
       <Audio src={staticFile("audio/cover.wav")} />
-      <div style={{ position: "absolute", left: 96, top: 300 }}>
+      <SafeAreaGuard slide="cover" />
+      <div data-safe style={{ position: "absolute", left: 96, top: 300 }}>
         <div style={{ fontFamily: fonts.serif, fontStyle: "italic", fontSize: 54, color: theme.muted }}>
           Release Notes
         </div>
@@ -51,7 +53,7 @@ export const CoverSlide: React.FC<{ manifest: Manifest }> = ({ manifest }) => {
           />
         </div>
       </div>
-      <div style={{ position: "absolute", left: 96, bottom: 200 }}>
+      <div data-safe style={{ position: "absolute", left: 96, bottom: 200 }}>
         {manifest.slides.map((slide, i) => {
           const start = TOC_START + i * TOC_STAGGER;
           const opacity = interpolate(frame, [start, start + 10], [0, 1], {

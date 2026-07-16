@@ -1,6 +1,8 @@
 import React from "react";
 import { Audio, interpolate, staticFile, useCurrentFrame } from "remotion";
 import { Layout } from "./Layout";
+import { SafeAreaGuard } from "./SafeAreaGuard";
+import { contentBodySize, contentTitleSize } from "./sizing";
 import type { Manifest } from "./types";
 import { fonts, theme } from "./theme";
 
@@ -11,6 +13,8 @@ export const ContentSlide: React.FC<{ manifest: Manifest; index: number }> = ({ 
     extrapolateLeft: "clamp",
     extrapolateRight: "clamp",
   });
+  const titleSize = contentTitleSize(slide.title);
+  const body = contentBodySize(slide.body);
 
   return (
     <Layout
@@ -20,7 +24,8 @@ export const ContentSlide: React.FC<{ manifest: Manifest; index: number }> = ({ 
       bottomRight={manifest.brand}
     >
       <Audio src={staticFile(`audio/slide${index + 1}.wav`)} />
-      <div style={{ position: "absolute", left: 96, top: 200, right: 96, opacity }}>
+      <SafeAreaGuard slide={`content ${index + 1}`} />
+      <div data-safe style={{ position: "absolute", left: 96, top: 180, right: 96, opacity }}>
         <div style={{ display: "flex", alignItems: "center", gap: 18 }}>
           <div style={{ width: 14, height: 14, borderRadius: "50%", background: theme.accent }} />
           <span
@@ -38,13 +43,13 @@ export const ContentSlide: React.FC<{ manifest: Manifest; index: number }> = ({ 
         <div
           style={{
             fontFamily: fonts.serif,
-            fontSize: 150,
+            fontSize: titleSize,
             fontWeight: 600,
             color: theme.ink,
             lineHeight: 1.05,
             letterSpacing: "-0.01em",
-            marginTop: 48,
-            maxWidth: 1400,
+            marginTop: 44,
+            maxWidth: 1500,
           }}
         >
           {slide.title}
@@ -53,11 +58,11 @@ export const ContentSlide: React.FC<{ manifest: Manifest; index: number }> = ({ 
           style={{
             fontFamily: fonts.serif,
             fontStyle: "italic",
-            fontSize: 44,
+            fontSize: body.fontSize,
             color: theme.muted,
-            lineHeight: 1.6,
-            marginTop: 64,
-            maxWidth: 1450,
+            lineHeight: body.lineHeight,
+            marginTop: 56,
+            maxWidth: 1500,
           }}
         >
           {slide.body}

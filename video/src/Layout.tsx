@@ -18,7 +18,7 @@ export const Layout: React.FC<{
   bottomRight: string;
   children: React.ReactNode;
 }> = ({ topLeft, topRight, bottomLeft, bottomRight, children }) => (
-  <AbsoluteFill style={{ backgroundColor: theme.bg, fontFamily: fonts.sans }}>
+  <AbsoluteFill data-layout-root style={{ backgroundColor: theme.bg, fontFamily: fonts.sans }}>
     <div style={{ position: "absolute", top: 110, left: 96, right: 96, height: 1, background: theme.hairline }} />
     <div style={{ position: "absolute", bottom: 96, left: 96, right: 96, height: 1, background: theme.hairline }} />
     <div style={{ ...corner, top: 62, left: 96, color: theme.ink, fontWeight: 600 }}>{topLeft}</div>
