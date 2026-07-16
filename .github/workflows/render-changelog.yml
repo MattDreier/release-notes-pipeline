@@ -11,6 +11,10 @@ on:
         required: true
       GEMINI_API_KEY:
         required: true
+      # Needed while changelog-video is a private repo: a fine-grained PAT with
+      # contents:read on MattDreier/changelog-video. Unneeded if the repo goes public.
+      CHANGELOG_VIDEO_TOKEN:
+        required: false
 
 jobs:
   render:
@@ -21,6 +25,7 @@ jobs:
         with:
           repository: ${{ github.repository_owner }}/changelog-video
           path: changelog-video
+          token: ${{ secrets.CHANGELOG_VIDEO_TOKEN || github.token }}
 
       - name: Check out target repo
         uses: actions/checkout@v4
