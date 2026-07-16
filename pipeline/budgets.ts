@@ -2,9 +2,10 @@ export const BUDGETS = {
   titleMaxChars: 48, // 2 lines × ~24 chars in the huge serif
   bodyMaxChars: 320,
   wordsPerSecond: 2.5, // ~150 spoken wpm
-  // 30-60s is the AIM for a typical PR, but a small infra/docs PR that's fully
-  // told in 20s should ship at 20s — padding to hit a floor is anti-communication.
-  narration: { minSeconds: 18, maxSeconds: 55 },
+  // 30-60s is the AIM for a typical PR. There is NO enforced minimum — a small
+  // infra/docs PR fully told in 15s ships at 15s; padding to a floor is
+  // anti-communication. Only the ceiling is hard (attention + cost guard).
+  narration: { aimMinSeconds: 28, maxSeconds: 55 },
   maxSlides: 6,
   slideTargetSeconds: 6, // the AIM: one digestible idea per slide
   slideMaxSeconds: 12, // outlier guard only — clarity may stretch a slide well past the 6s target
@@ -40,25 +41,23 @@ export function estimateSpokenSeconds(script: string): number {
   return words / BUDGETS.wordsPerSecond;
 }
 
+/**
+ * Only the CEILING is a hard local check. Shortness is never failed here —
+ * whether a brief draft is "clear and complete" vs "missing context" is the
+ * critic's judgment call, and padding to a floor is anti-communication.
+ */
 export function narrationBudgetCheck(scripts: string[]): {
   seconds: number;
   ok: boolean;
   reason?: string;
 } {
   const seconds = scripts.reduce((t, s) => t + estimateSpokenSeconds(s), 0);
-  const { minSeconds, maxSeconds } = BUDGETS.narration;
-  if (seconds < minSeconds) {
-    return {
-      seconds,
-      ok: false,
-      reason: `narration ~${seconds.toFixed(0)}s is under the ${minSeconds}s floor — add a grounded slide or expand scripts (never pad)`,
-    };
-  }
+  const { maxSeconds } = BUDGETS.narration;
   if (seconds > maxSeconds) {
     return {
       seconds,
       ok: false,
-      reason: `narration ~${seconds.toFixed(0)}s exceeds the ${maxSeconds}s ceiling — tighten scripts`,
+      reason: `narration ~${seconds.toFixed(0)}s exceeds the ${maxSeconds}s ceiling — bundle minor items into a grid slide or trim the least newsworthy slide (do NOT compress wording at the cost of clarity)`,
     };
   }
   return { seconds, ok: true };

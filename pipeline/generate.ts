@@ -202,10 +202,18 @@ export async function generateManifest(
     // The editor re-plans on revision cycles too — critic notes are often
     // structural ("split this into two slides"), which only the plan can fix;
     // freezing the plan after pass 1 made such notes impossible to apply.
-    console.error(`pass 1/4: editor${attempt ? ` (revision ${attempt})` : ""}`);
+    // Final attempt = SAFE MODE: stop iterating on ambition, collapse to the
+    // simplest form that stays clear. An "Also Fixed"-style grid or a single
+    // standard slide is the escape hatch — shorter and plainer beats clever.
+    const safeMode =
+      attempt === 2
+        ? `\n\nSAFE MODE — FINAL ATTEMPT. Two drafts have failed review. Do not iterate on the previous plan: simplify aggressively instead. Collapse to the FEWEST slides that remain clear — ideally ONE "standard" slide telling the single most important thing, or ONE "grid" slide bundling the small items. Use the plainest language available. A short, modest, obviously-true video that a stranger understands is the goal; ambition is not.`
+        : "";
+    console.error(`pass 1/4: editor${attempt === 2 ? " (SAFE MODE)" : attempt ? ` (revision ${attempt})` : ""}`);
     plan = (await runQuery(
       editorPrompt(bundle, config) +
-        (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : ""),
+        (notes.length ? `\n\nREVISION NOTES from the previous cycle (apply any that concern the slide plan — e.g. splitting/merging slides):\n- ${notes.join("\n- ")}` : "") +
+        safeMode,
       PLAN_SCHEMA,
     )) as Plan;
     console.error(`  → ${plan.slides.length} slide(s): ${plan.slides.map((s) => s.type).join(", ")}`);

@@ -45,9 +45,9 @@ For each slide choose:
 3. "angle": one sentence, user's point of view.
 4. "targetSeconds": ~${BUDGETS.slideTargetSeconds} by default; up to ~10 when the idea needs the room.
 
-## Runtime budget (hard constraint)
+## Runtime (guideline, with ONE hard ceiling)
 
-Total narration (cover ~6-9s + slides + outro ~4-6s) must land between ${BUDGETS.narration.minSeconds} and ${BUDGETS.narration.maxSeconds} seconds. Slides together: roughly 15-40 seconds.
+AIM for roughly 30-60 seconds of finished video on a typical PR. There is NO minimum: a small PR whose story is fully told in 15 seconds ships at 15 seconds — never add a slide, stretch wording, or manufacture significance to fill time. The only HARD limit is the ceiling: total narration (cover + slides + outro) must stay under ${BUDGETS.narration.maxSeconds} seconds — and if the story presses against it, bundle minor items into one "grid" slide rather than cutting context from the items that matter.
 
 Ground every angle in what the diff actually changes. Do not invent capabilities the code does not show. A pure chore/refactor PR still gets one modest IMPROVEMENT slide about what quietly got better.
 
@@ -134,7 +134,7 @@ ${prContext(bundle)}
 1. Comprehension (the prime directive): every script and payload is clear, natural, and self-contained for a viewer with zero context. Flag anything that requires prior knowledge, is packed too dense to follow aloud, or reads like a compressed telegram.
 2. Pacing judgment: ~${BUDGETS.slideTargetSeconds}s per slide is the aim. A slide running 7-10s is acceptable IF the extra time is earning its keep in clarity. Fail pacing only when a slide is long AND could be split cleanly or tightened without losing meaning — and then prescribe the split, not blind cuts.
 3. Character budgets: title ≤ ${BUDGETS.titleMaxChars} chars; standard body ≤ ${BUDGETS.bodyMaxChars} chars; grid descriptions ≤ 110 chars; code lines ≤ 64 chars.
-4. Total runtime: all narration (cover + slides + outro) between ${BUDGETS.narration.minSeconds} and ${BUDGETS.narration.maxSeconds} seconds.
+4. Runtime: total narration must stay under ${BUDGETS.narration.maxSeconds} seconds (hard ceiling). There is NO minimum — never demand filler or padding. Fail a short draft ONLY when its brevity comes from missing context a first-time viewer needs, not because the change itself is small.
 5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use image URLs that actually appear in the PR description.
 6. Layout fit: metrics values are real quantities from the PR; code lines are text a user would literally type into the product (not source code); grid items are genuinely minor; comparison only used when before/after images exist.
 7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud.
