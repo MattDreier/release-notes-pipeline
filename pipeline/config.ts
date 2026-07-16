@@ -23,7 +23,7 @@ export function loadRepoConfig(json: unknown, repoName: string): RepoConfig {
   return {
     product: overrides.product ?? repoName,
     domain: overrides.domain ?? `github.com/${repoName}`,
-    brand: overrides.brand ?? repoName.toUpperCase(),
+    brand: overrides.brand ?? "Matt Dreier",
     version: "date",
     ttsModel: overrides.ttsModel ?? "gemini-3.1-flash-tts-preview",
     voice: overrides.voice ?? "Charon",

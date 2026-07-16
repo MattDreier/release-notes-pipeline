@@ -11,11 +11,11 @@ export const Main: React.FC<{ manifest: Manifest; timing: Timing }> = ({ manifes
   return (
     <Series>
       <Series.Sequence durationInFrames={timing.coverFrames}>
-        <CoverSlide manifest={manifest} />
+        <CoverSlide manifest={manifest} durationInFrames={timing.coverFrames} />
       </Series.Sequence>
       {manifest.slides.map((_, i) => (
         <Series.Sequence key={i} durationInFrames={timing.slideFrames[i]}>
-          <ContentSlide manifest={manifest} index={i} />
+          <ContentSlide manifest={manifest} index={i} durationInFrames={timing.slideFrames[i]} />
         </Series.Sequence>
       ))}
       <Series.Sequence durationInFrames={timing.outroFrames}>

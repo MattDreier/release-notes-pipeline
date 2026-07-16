@@ -6,8 +6,8 @@ import { cancelRender, continueRender, delayRender, useCurrentFrame, useVideoCon
 // outside these bounds by design and is not measured.
 export const SAFE_AREA = { top: 130, bottom: 964, left: 90, right: 1830 } as const;
 
-// Slide content settles (fades/slides complete) well before this frame.
-const SETTLE_FRAME = 65;
+// Slide content settles (staggered entrances complete) well before this frame.
+const SETTLE_FRAME = 95;
 
 /**
  * Render-time layout gate. Place once per slide, and mark each content root

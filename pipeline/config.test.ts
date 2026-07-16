@@ -7,6 +7,7 @@ describe("config", () => {
     expect(c.product).toBe("dispatch-schedule-ui");
     expect(c.ttsModel).toBe("gemini-3.1-flash-tts-preview");
     expect(c.voice).toBeTruthy();
+    expect(c.brand).toBe("Matt Dreier"); // bottom-right corner defaults to Matt's name
   });
 
   it("merges overrides over defaults", () => {
