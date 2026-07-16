@@ -36,6 +36,20 @@ const PLAN_SCHEMA = {
   additionalProperties: false,
   properties: {
     newsworthy: { type: "boolean" },
+    technical: {
+      type: "array",
+      minItems: 1,
+      maxItems: 8,
+      items: {
+        type: "object",
+        additionalProperties: false,
+        properties: {
+          category: { type: "string", enum: CATEGORY_ENUM },
+          bullet: { type: "string" },
+        },
+        required: ["category", "bullet"],
+      },
+    },
     slides: {
       type: "array",
       minItems: 1,
@@ -53,7 +67,7 @@ const PLAN_SCHEMA = {
       },
     },
   },
-  required: ["newsworthy", "slides"],
+  required: ["newsworthy", "technical", "slides"],
 };
 
 const COPY_SCHEMA = {
@@ -145,6 +159,7 @@ const CRITIC_SCHEMA = {
 type Category = "FEATURE" | "IMPROVEMENT" | "FIX" | "BREAKING CHANGE";
 type LayoutType = "standard" | "metrics" | "code" | "comparison" | "grid";
 type Plan = {
+  technical: { category: Category; bullet: string }[];
   slides: { type: Category; layout: LayoutType; angle: string; targetSeconds: number }[];
 };
 type CopySlide = {
@@ -159,11 +174,18 @@ type Copy = { slides: CopySlide[]; subline: string };
 type Voice = { cover: string; slides: string[]; outro: string };
 type Critique = { pass: boolean; notes: string[] };
 
+export type GenerationResult = {
+  manifest: Manifest;
+  /** Terse dev-facing bullets for CHANGELOG.md, produced by the same
+   * diff-grounded editor pass that plans the video. */
+  technical: { category: Category; bullet: string }[];
+};
+
 export async function generateManifest(
   bundle: PrBundle,
   config: RepoConfig,
   { runQuery = runAgentQuery }: { runQuery?: RunQuery } = {},
-): Promise<Manifest> {
+): Promise<GenerationResult> {
   const version = dateVersion(new Date(bundle.mergedAt));
 
   console.error("pass 1/4: editor");
@@ -230,7 +252,7 @@ export async function generateManifest(
 
     if (localBudget.ok && pacing.ok && schema.ok && critic.pass) {
       console.error(`  ✓ approved (narration ~${localBudget.seconds.toFixed(0)}s, ${draft.slides.length} slides)`);
-      return schema.manifest;
+      return { manifest: schema.manifest, technical: plan.technical };
     }
 
     notes = [

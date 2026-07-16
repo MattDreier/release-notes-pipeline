@@ -19,7 +19,7 @@ const good = {
   outro: {
     headline: "Dispatch News",
     cta: "Subscribe",
-    subline: "Full changelog at the link below.",
+    subline: "Full release notes at the link below.",
     script: "Thanks for watching.",
   },
 };

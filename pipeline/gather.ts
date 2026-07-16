@@ -59,7 +59,7 @@ export async function gatherPr(repo: string, pr: number): Promise<PrBundle> {
   const diff = truncateDiff(await gh(["pr", "diff", String(pr), "--repo", repo]));
   let configJson: unknown;
   try {
-    const raw = await gh(["api", `/repos/${repo}/contents/.changelog-video.json`, "--jq", ".content"]);
+    const raw = await gh(["api", `/repos/${repo}/contents/.release-notes.json`, "--jq", ".content"]);
     configJson = JSON.parse(Buffer.from(raw.trim(), "base64").toString("utf8"));
   } catch {
     configJson = undefined; // no config file — defaults apply

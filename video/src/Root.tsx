@@ -10,7 +10,7 @@ const PAD = 15; // breathing room after each narration ends
 
 export const RemotionRoot: React.FC = () => (
   <Composition
-    id="Changelog"
+    id="ReleaseNotes"
     component={Main}
     fps={FPS}
     width={1920}

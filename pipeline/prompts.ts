@@ -49,7 +49,11 @@ For each slide choose:
 
 Total narration (cover ~6-9s + slides + outro ~4-6s) must land between ${BUDGETS.narration.minSeconds} and ${BUDGETS.narration.maxSeconds} seconds. Slides together: roughly 15-40 seconds.
 
-Ground every angle in what the diff actually changes. Do not invent capabilities the code does not show. A pure chore/refactor PR still gets one modest IMPROVEMENT slide about what quietly got better.`;
+Ground every angle in what the diff actually changes. Do not invent capabilities the code does not show. A pure chore/refactor PR still gets one modest IMPROVEMENT slide about what quietly got better.
+
+## Also: the technical changelog ("technical")
+
+Separately from the slides, write 1-8 terse bullets for the repo's CHANGELOG.md. This is the ONE output where the audience rule is inverted: these bullets are for DEVELOPERS and technical readers — precise, scannable, grounded in the diff. Name the actual behavior change; file/function/property names in backticks are welcome when they aid precision. One bullet per distinct change, each tagged with its category (FEATURE → Added, IMPROVEMENT → Changed, FIX → Fixed, BREAKING CHANGE → Changed with a breaking flag). No marketing language here.`;
 }
 
 export function copyPrompt(plan: unknown, bundle: PrBundle): string {
