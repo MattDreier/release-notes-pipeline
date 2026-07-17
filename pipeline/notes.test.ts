@@ -76,6 +76,30 @@ describe("upsertChangelog", () => {
     expect(out).toContain("- revised");
     expect(out.match(/## v2/g)).toHaveLength(1);
   });
+
+  it("replaces a backfilled older version IN PLACE, not at the top", () => {
+    // Live failure 2026-07-16: regenerating v1.13.0 after v1.14.x existed
+    // landed the section above them and needed hand-reordering.
+    const mk = (version: string, pr: number, bullet = "b") =>
+      changelogSection({ version, date: "2026-07-16", pr, repo: "o/r", items: [{ category: "FIX", bullet }] });
+    let doc = upsertChangelog(null, mk("v1.13.0", 230));
+    doc = upsertChangelog(doc, mk("v1.14.0", 251));
+    doc = upsertChangelog(doc, mk("v1.14.4", 246));
+    const out = upsertChangelog(doc, mk("v1.13.0", 230, "regenerated with richer bullets"));
+    expect(out).toContain("- regenerated with richer bullets");
+    expect(out.match(/## v1\.13\.0/g)).toHaveLength(1);
+    // Order preserved: newest first, the regenerated section stays at the bottom.
+    expect(out.indexOf("## v1.14.4")).toBeLessThan(out.indexOf("## v1.14.0"));
+    expect(out.indexOf("## v1.14.0")).toBeLessThan(out.indexOf("## v1.13.0"));
+  });
+
+  it("matches by PR number even when the heading's date differs between runs", () => {
+    const first = upsertChangelog(null, section); // pr 2, date 2026-07-16
+    const rerun = changelogSection({ version: "v2", date: "2026-07-17", pr: 2, repo: "o/r", items: [{ category: "FIX", bullet: "next-day re-run" }] });
+    const out = upsertChangelog(first, rerun);
+    expect(out).toContain("- next-day re-run");
+    expect(out.match(/## v2/g)).toHaveLength(1);
+  });
 });
 
 const manifest: Manifest = {
@@ -119,5 +143,20 @@ describe("upsertReleaseNotes", () => {
     expect(first.startsWith("# Release Notes")).toBe(true);
     const again = upsertReleaseNotes(first, section);
     expect(again.match(/## v2026\.7\.16/g)).toHaveLength(1);
+  });
+
+  it("replaces a backfilled older version IN PLACE, keyed by version token", () => {
+    const mk = (version: string, title: string) =>
+      releaseNotesSection(
+        { ...manifest, version, slides: [{ type: "FIX", layout: "standard", title, script: "s", body: "b." }] },
+        { date: "2026-07-16", videoFile: `x-${version}.mp4` },
+      );
+    let doc = upsertReleaseNotes(null, mk("v1.13.0", "Old Copy"));
+    doc = upsertReleaseNotes(doc, mk("v1.14.4", "Newer Release"));
+    const out = upsertReleaseNotes(doc, mk("v1.13.0", "Regenerated Copy"));
+    expect(out).toContain("**Regenerated Copy**");
+    expect(out).not.toContain("**Old Copy**");
+    expect(out.match(/## v1\.13\.0/g)).toHaveLength(1);
+    expect(out.indexOf("## v1.14.4")).toBeLessThan(out.indexOf("## v1.13.0"));
   });
 });
