@@ -30,7 +30,7 @@ export function loadRepoConfig(json: unknown, repoName: string): RepoConfig {
     // section, since the upsert keys on the heading line.
     version: overrides.version ?? "semver",
     ttsModel: overrides.ttsModel ?? "gemini-3.1-flash-tts-preview",
-    voice: overrides.voice ?? "Charon",
+    voice: overrides.voice ?? "Iapetus",
   };
 }
 
