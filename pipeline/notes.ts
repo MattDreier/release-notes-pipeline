@@ -84,22 +84,45 @@ export function releaseNotesSection(
   return `${lines.join("\n").trimEnd()}\n`;
 }
 
-/** Insert `section` newest-first under the document header, replacing any
- * existing section whose `## ` heading line matches the new one's (so re-runs
- * for the same PR are idempotent). */
-function upsert(existing: string | null, section: string, header: string): string {
+/** Identity of a `## ` heading line, for matching a regenerated section to the
+ * one it replaces. The changelog keys on the PR number (stable across re-runs
+ * even if the computed version or date were to differ); release notes key on
+ * the version token. Falls back to the whole heading line. */
+const changelogKey = (heading: string) => heading.match(/\(PR \[#(\d+)\]/)?.[1] ?? heading;
+const releaseNotesKey = (heading: string) => heading.match(/^## (\S+)/)?.[1] ?? heading;
+
+/** Upsert `section` into the document. A section with the same identity is
+ * replaced IN PLACE — regenerating an older version (backfill) must not move
+ * it above newer ones (live failure: a regenerated v1.13.0 landed above
+ * v1.14.4 and needed hand-reordering). Only a genuinely new section is
+ * inserted at the top, since in the normal flow each new PR is the newest. */
+function upsert(
+  existing: string | null,
+  section: string,
+  header: string,
+  keyOf: (heading: string) => string,
+): string {
   const doc = existing && existing.trim().length > 0 ? existing : header;
-  const headingLine = section.slice(0, section.indexOf("\n"));
-  // Drop an existing section with the same heading (match up to next "## " or EOF).
-  const escaped = headingLine.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-  const withoutDup = doc.replace(new RegExp(`${escaped}[\\s\\S]*?(?=\\n## |$)`, ""), "").trimEnd();
-  const firstEntry = withoutDup.search(/\n## /);
-  if (firstEntry === -1) return `${withoutDup}\n\n${section.trimEnd()}\n`;
-  return `${withoutDup.slice(0, firstEntry)}\n\n${section.trimEnd()}\n${withoutDup.slice(firstEntry)}\n`;
+  const sec = section.trimEnd();
+  const nl = sec.indexOf("\n");
+  const key = keyOf(nl === -1 ? sec : sec.slice(0, nl));
+  const headings = [...doc.matchAll(/^## .*$/gm)];
+  const idx = headings.findIndex((m) => keyOf(m[0]) === key);
+  if (idx >= 0) {
+    // Replace in place: the old section spans from its heading to the next one.
+    const start = headings[idx].index!;
+    const end = idx + 1 < headings.length ? headings[idx + 1].index! : doc.length;
+    const tail = doc.slice(end).trimEnd();
+    return `${doc.slice(0, start).trimEnd()}\n\n${sec}\n${tail ? `\n${tail}\n` : ""}`;
+  }
+  // New section: newest-first, above the first existing entry.
+  const first = headings.length > 0 ? headings[0].index! : doc.length;
+  const tail = doc.slice(first).trimEnd();
+  return `${doc.slice(0, first).trimEnd()}\n\n${sec}\n${tail ? `\n${tail}\n` : ""}`;
 }
 
 export const upsertChangelog = (existing: string | null, section: string) =>
-  upsert(existing, section, CHANGELOG_HEADER);
+  upsert(existing, section, CHANGELOG_HEADER, changelogKey);
 
 export const upsertReleaseNotes = (existing: string | null, section: string) =>
-  upsert(existing, section, RELEASE_NOTES_HEADER);
+  upsert(existing, section, RELEASE_NOTES_HEADER, releaseNotesKey);
