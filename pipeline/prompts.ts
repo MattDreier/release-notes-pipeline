@@ -33,7 +33,7 @@ Labels: ${bundle.labels.join(", ") || "(none)"}
 ### PR description
 ${bundle.body || "(empty)"}${issuesContext(bundle)}
 
-### Screenshots found in the PR description
+### Before/after screenshots available (PR description + committed repo assets)
 ${bundle.images.length ? bundle.images.map((u, i) => `${i + 1}. ${u}`).join("\n") : "(none)"}
 
 ### Diff (noise files omitted)
@@ -62,7 +62,7 @@ For each slide choose:
    - "standard" — the default: headline + short supporting paragraph.
    - "metrics" — ONLY for quantifiable wins (times, sizes, counts). 1-3 giant number+label pairs.
    - "code" — a "here is what you type" card. Use ONLY when showing the user literal text they would type into the product (a search query, a command, a formula). NOT for showing source code.
-   - "comparison" — before/after SCREENSHOTS side by side. Available ONLY if the PR description contains usable before/after images (see the screenshots list above). If no images exist, this layout is forbidden.
+   - "comparison" — before/after SCREENSHOTS side by side. Available ONLY if before/after images are listed above (from the PR description OR committed to the repo). If no images are listed, this layout is forbidden.
    - "grid" — bundle 2-6 small fixes/improvements into one "Also fixed" style slide (tag + one plain-language line each) instead of wasting slides on minor items.
 3. "angle": one sentence, user's point of view.
 4. "targetSeconds": ~${BUDGETS.slideTargetSeconds} by default; up to ~10 when the idea needs the room.
@@ -98,7 +98,7 @@ ${prContext(bundle)}
   - standard → "body": HARD LIMIT ${BUDGETS.bodyMaxChars} chars. 2-4 plain sentences. No markdown.
   - metrics → "metrics": 1-3 items of {"value": short big number like "-7 MB" or "2×" (max 10 chars), "label": what it measures in plain words (max 30 chars)}.
   - code → "code": {"label": what this input is, e.g. "SEARCH" or "COMMAND" (max 20 chars), "lines": 1-6 short strings of EXACTLY what the user types (max 64 chars each)}.
-  - comparison → "beforeAfter": {"before": <URL chosen from the PR screenshots list>, "after": <URL>, "beforeLabel"?: short caption, "afterLabel"?: short caption}. Pick the URLs that clearly show old vs new.
+  - comparison → "beforeAfter": {"before": <image chosen from the screenshots list above>, "after": <image>, "beforeLabel"?: short caption, "afterLabel"?: short caption}. Pick the images that clearly show old vs new; copy each reference EXACTLY as listed (a URL or a committed repo path).
   - grid → "gridItems": 2-6 items of {"tag": lowercase area word like "search" or "map" (max 14 chars), "description": one plain sentence a user understands (max 110 chars)}.
 
 Every claim must be true to the diff. If the editor's angle overstates, tone it down.`;
@@ -162,7 +162,7 @@ ${prContext(bundle)}
 2. Pacing judgment: ~${BUDGETS.slideTargetSeconds}s per slide is the aim. A slide running 7-10s is acceptable IF the extra time is earning its keep in clarity. Fail pacing only when a slide is long AND could be split cleanly or tightened without losing meaning — and then prescribe the split, not blind cuts.
 3. Character budgets: title ≤ ${BUDGETS.titleMaxChars} chars; standard body ≤ ${BUDGETS.bodyMaxChars} chars; grid descriptions ≤ 110 chars; code lines ≤ 64 chars.
 4. Runtime: total narration must stay under ${BUDGETS.narration.maxSeconds} seconds (hard ceiling). There is NO minimum — never demand filler or padding. Fail a short draft ONLY when its brevity comes from missing context a first-time viewer needs, not because the change itself is small.
-5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use image URLs that actually appear in the PR description.
+5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use images from the screenshots list above (a PR-description URL or a committed repo asset) — never an invented one.
 6. Layout fit: metrics values are real quantities from the PR; code lines are text a user would literally type into the product (not source code); grid items are genuinely minor; comparison only used when before/after images exist.
 7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud, in plain prose — fail any script containing bracketed stage directions or delivery tags.
 8. Confidence (see the Tone rules above): fail any slide whose topic is the problem itself rather than its fix; fail relief/exasperation wording ("finally", "at last", "actually works now", "you can trust it again" and kin); fail dramatized or catastrophic descriptions of old behavior. The old behavior may appear only as one brief, neutral set-up sentence inside the slide about its fix. Grounding still applies — the fix must be real — but the framing must leave a user or investor MORE confident in the product, never less.

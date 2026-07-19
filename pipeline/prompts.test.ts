@@ -54,6 +54,18 @@ describe("prompt builders", () => {
     expect(p).toContain("before.png"); // available screenshots listed
   });
 
+  it("lists committed repo assets and lets the comparison layout use them", () => {
+    const b: PrBundle = {
+      ...bundle,
+      images: ["release-notes/assets/pr266/before.png", "release-notes/assets/pr266/after.png"],
+    };
+    const ed = editorPrompt(b, config);
+    expect(ed).toContain("release-notes/assets/pr266/before.png"); // listed as available
+    expect(ed).toContain("committed to the repo"); // comparison allowed from committed assets
+    expect(copyPrompt({ slides: [] }, b)).toContain("committed repo path"); // copywriter allows them
+    expect(criticPrompt({}, b)).toContain("committed repo asset"); // critic grounds against them
+  });
+
   it("copy prompt states hard character budgets", () => {
     const p = copyPrompt({ slides: [] }, bundle);
     expect(p).toContain("48");

@@ -3,6 +3,7 @@ import { copyFile, mkdir, readFile, writeFile } from "node:fs/promises";
 import { join } from "node:path";
 import { estimateSpokenSeconds } from "./budgets";
 import { gatherPr } from "./gather";
+import { discoverCommittedComparisons, resolveImageSource } from "./comparisons";
 import { loadRepoConfig } from "./config";
 import { generateManifest } from "./generate";
 import { GenerationExhausted, measureClips, writeRunRecord, type RunRecord } from "./runlog";
@@ -67,21 +68,48 @@ if (values.target) {
 }
 const config = loadRepoConfig(configJson, values.repo.split("/")[1]);
 
-/** Download any remote comparison screenshots into video/public/images/. */
+// Committed before/after comparison assets in the target checkout (produced by
+// an automated smoke test, e.g. dispatch-schedule-ui `scripts/smoke-tz.ts`).
+// Surface them to the editorial agent as available screenshots so it can choose
+// the comparison layout; localizeImages then resolves them straight off disk —
+// private-repo-safe, no authenticated download. Absent → no-op.
+const committed = discoverCommittedComparisons(values.target, Number(values.pr));
+if (committed.length > 0) {
+  bundle.images = [...bundle.images, ...committed.flatMap((c) => [c.before, c.after])];
+  console.error(`  🖼  ${committed.length} committed comparison pair(s) from ${values.target}`);
+}
+
+/** Materialize a comparison slide's screenshots into video/public/images/:
+ *  http(s) URLs are downloaded (PR attachments / preview URLs), committed repo
+ *  assets are copied off the --target checkout. */
 async function localizeImages(m: Manifest): Promise<void> {
   for (const [i, slide] of m.slides.entries()) {
     if (slide.layout !== "comparison" || !slide.beforeAfter) continue;
     for (const key of ["before", "after"] as const) {
-      const src = slide.beforeAfter[key];
-      if (!/^https?:\/\//.test(src)) continue; // already local
-      const res = await fetch(src, {
-        headers: process.env.GH_TOKEN ? { authorization: `Bearer ${process.env.GH_TOKEN}` } : {},
-      });
-      if (!res.ok) throw new Error(`failed to download ${key} screenshot (${res.status}): ${src}`);
-      const ext = (res.headers.get("content-type") ?? "").includes("jpeg") ? "jpg" : "png";
+      const resolved = resolveImageSource(slide.beforeAfter[key]);
+      if (resolved.kind === "ready") continue; // already a public-relative path
+
+      let bytes: ArrayBuffer | Uint8Array;
+      let ext: "jpg" | "png";
+      if (resolved.kind === "remote") {
+        const res = await fetch(resolved.url, {
+          headers: process.env.GH_TOKEN ? { authorization: `Bearer ${process.env.GH_TOKEN}` } : {},
+        });
+        if (!res.ok)
+          throw new Error(`failed to download ${key} screenshot (${res.status}): ${resolved.url}`);
+        ext = (res.headers.get("content-type") ?? "").includes("jpeg") ? "jpg" : "png";
+        bytes = await res.arrayBuffer();
+      } else {
+        // Committed repo asset — copy straight off the checkout.
+        if (!values.target)
+          throw new Error(`committed comparison asset needs --target: ${resolved.relPath}`);
+        bytes = await readFile(join(values.target, resolved.relPath));
+        ext = /\.jpe?g$/i.test(resolved.relPath) ? "jpg" : "png";
+      }
+
       const rel = `images/slide${i + 1}-${key}.${ext}`;
       await mkdir(join(publicDir, "images"), { recursive: true });
-      await Bun.write(join(publicDir, rel), await res.arrayBuffer());
+      await Bun.write(join(publicDir, rel), bytes);
       slide.beforeAfter[key] = rel;
       console.error(`  🖼  ${rel}`);
     }
