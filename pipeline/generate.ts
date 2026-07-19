@@ -216,6 +216,11 @@ export async function generateManifest(
       ? `\n\nPREVIOUS DRAFT — the REVISION NOTES below refer to THIS draft (its slide numbers, its quoted sentences). Treat it as the baseline: keep every title, script, and body the notes do NOT flag verbatim; change only what the notes call out. Do not re-invent unflagged content.\n${prevDraft}`
       : "";
   let plan: Plan | undefined;
+  // Salvage inputs for the graceful-degradation path: the freshest diff-grounded
+  // changelog bullets and computed version, so an exhausted run can still ship
+  // its CHANGELOG entry even when no video converges.
+  let lastTechnical: { category: Category; bullet: string }[] = [];
+  let lastVersion = "";
   // Four attempts: an ambitious draft, one revision, then TWO safe-mode passes.
   // The editor re-plans on revision cycles too — critic notes are often
   // structural ("split this into two slides"), which only the plan can fix;
@@ -251,6 +256,7 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
       ),
     );
     plan = planOut as Plan;
+    lastTechnical = plan.technical;
     console.error(`  → ${plan.slides.length} slide(s): ${plan.slides.map((s) => s.type).join(", ")}`);
 
     console.error(`pass 2/4: copywriter${attempt ? ` (revision ${attempt})` : ""}`);
@@ -283,6 +289,7 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
       config.version === "semver"
         ? versionForPr(bundle.changelog, bundle.number, plan.technical)
         : dateVersion(new Date(bundle.mergedAt));
+    lastVersion = version;
 
     const draft = {
       product: config.product,
@@ -372,5 +379,7 @@ To fit the total budget, cut framing before substance: keep the cover and outro 
     `manifest failed validation after ${MAX_ATTEMPTS - 1} revision cycles: ${notes.join(" | ")}`,
     attempts,
     notes,
+    lastTechnical,
+    lastVersion,
   );
 }

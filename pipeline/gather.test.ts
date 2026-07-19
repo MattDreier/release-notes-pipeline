@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { extractImageUrls, isNoiseFile, isTransientGhError, truncateDiff } from "./gather";
+import { extractImageUrls, isNoiseFile, isTransientGhError, truncateDiff, truncateIssueBody } from "./gather";
 
 describe("extractImageUrls", () => {
   it("finds markdown and html images, deduped", () => {
@@ -57,6 +57,18 @@ describe("truncateDiff", () => {
     const out = truncateDiff(big, 5_000);
     expect(out.length).toBeLessThanOrEqual(5_100);
     expect(out).toContain("[diff truncated");
+  });
+});
+
+describe("truncateIssueBody", () => {
+  it("passes short bodies through untouched", () => {
+    expect(truncateIssueBody("a short user story")).toBe("a short user story");
+  });
+
+  it("caps long bodies with a truncation note", () => {
+    const out = truncateIssueBody("x".repeat(10_000), 4_000);
+    expect(out.length).toBeLessThan(4_100);
+    expect(out).toContain("[issue body truncated at 4000 characters]");
   });
 });
 

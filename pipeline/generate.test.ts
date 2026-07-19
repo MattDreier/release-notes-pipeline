@@ -13,6 +13,7 @@ const bundle: PrBundle = {
   mergedAt: "2026-07-16T12:00:00Z",
   diff: "diff --git a/x b/x",
   images: [],
+  issues: [],
   configJson: undefined,
   changelog: null,
 };
@@ -118,5 +119,21 @@ describe("generateManifest revision loop", () => {
     expect(err.attempts).toHaveLength(4);
     expect(err.finalNotes).toEqual(["still unclear"]);
     expect(calls).toHaveLength(16); // 4 attempts × 4 passes
+  });
+
+  it("carries salvageable changelog inputs on exhaustion (video withheld, changelog survives)", async () => {
+    const reject = { pass: false, notes: ["still unclear"] };
+    const { runQuery } = fakeRunQuery([reject, reject, reject, reject]);
+    const err = await generateManifest(bundle, config, { runQuery }).then(
+      () => {
+        throw new Error("expected rejection");
+      },
+      (e) => e,
+    );
+    expect(err).toBeInstanceOf(GenerationExhausted);
+    // The diff-grounded editor bullets ride along so the CLI can still write
+    // CHANGELOG.md even though no video ever passed the critic gate.
+    expect(err.technical).toEqual([{ category: "FIX", bullet: "fixed the frobnicator" }]);
+    expect(err.version).toBeTruthy(); // computed semver, e.g. "v1.0.1"
   });
 });
