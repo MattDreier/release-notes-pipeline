@@ -6,12 +6,32 @@ const AUDIENCE = `## Audience (applies to every word you write)
 
 The viewer is NON-TECHNICAL. They use the product; they have never seen the code, the issue tracker, or any internal discussion. Every sentence must make sense to someone with zero context: describe what they can now do or what stopped being annoying, never how it was implemented. No repo names, branch names, file names, framework names, or engineering vocabulary.`;
 
+const TONE = `## Tone (protect confidence — applies to every word you write)
+
+These notes speak for a product people rely on and for a team that ships steadily. They are watched by users AND investors. Be truthful — never hide that something was fixed — but frame every item around the value delivered, not the defect repaired:
+
+- Lead with what works now. For a FIX, the story is the improved behavior. The old behavior gets AT MOST one brief, matter-of-fact set-up sentence — then move on. Never dwell on a bug, dramatize its impact, or narrate confusion ("nobody could tell which one was right" is a failure).
+- A problem is never a slide topic of its own. It earns a set-up sentence inside the slide about its fix — never a dedicated slide walking through how broken things were.
+- Relief and exasperation words are BANNED: "finally", "at last", "actually works now", "as it should have", "long-overdue", "you can trust it again", and anything similar. They read as an admission that the product was broken all along and everyone knew.
+- State old behavior neutrally and specifically ("previously, times could display differently on different devices"), never catastrophically ("the schedule couldn't be trusted").
+- Never disparage a previous version, imply users were suffering, or apologize. Confidence comes from precision: say exactly what improved, plainly, and stop.`;
+
+const issuesContext = (bundle: PrBundle) =>
+  bundle.issues.length
+    ? `
+
+### Linked issues (the WHY behind this PR — motivation only)
+${bundle.issues.map((i) => `\n#### Issue #${i.number}: ${i.title}\n${i.body || "(empty)"}`).join("\n")}
+
+These issues explain the problem or user story that MOTIVATED the PR — use them to understand the symptom, who it affects, and the plain-language stakes. CAUTION: an issue describes a desired end state that may span several PRs. The diff is the SOLE authority on what this PR actually delivers — never claim a capability an issue asks for unless the diff implements it.`
+    : "";
+
 const prContext = (bundle: PrBundle) => `## PR #${bundle.number}: ${bundle.title}
 
 Labels: ${bundle.labels.join(", ") || "(none)"}
 
 ### PR description
-${bundle.body || "(empty)"}
+${bundle.body || "(empty)"}${issuesContext(bundle)}
 
 ### Screenshots found in the PR description
 ${bundle.images.length ? bundle.images.map((u, i) => `${i + 1}. ${u}`).join("\n") : "(none)"}
@@ -26,6 +46,8 @@ export function editorPrompt(bundle: PrBundle, config: RepoConfig): string {
   return `You are the release-notes editor for "${config.product}". A pull request just merged. Decide what in it is newsworthy to a USER of the product.
 
 ${AUDIENCE}
+
+${TONE}
 
 ${prContext(bundle)}
 
@@ -61,6 +83,8 @@ export function copyPrompt(plan: unknown, bundle: PrBundle): string {
 
 ${AUDIENCE}
 
+${TONE}
+
 An editor has planned the slides (respect each slide's layout):
 ${JSON.stringify(plan, null, 2)}
 
@@ -88,6 +112,8 @@ export function voicePrompt(copy: unknown, plan: { slides: { targetSeconds: numb
     )
     .join("\n");
   return `You are a voiceover writer. Rewrite the following slide copy as narration scripts — written for the EAR of a NON-TECHNICAL viewer. Speech runs at ~150 words per minute (${BUDGETS.wordsPerSecond} words/second).
+
+${TONE}
 
 Slide copy:
 ${JSON.stringify(copy, null, 2)}
@@ -117,6 +143,8 @@ export function criticPrompt(draft: unknown, bundle: PrBundle): string {
 
 ${AUDIENCE}
 
+${TONE}
+
 ## THE PRIME DIRECTIVE: effective communication
 
 Above every other check: would a first-time, non-technical viewer actually UNDERSTAND each slide on one hearing? Telegraphic, over-compressed, or ambiguous phrasing is a FAILURE even if it satisfies every budget. When any other check conflicts with comprehension, comprehension wins — never issue a note that would make the copy less clear (e.g. never say "cut to N words" if cutting would damage the message; say "split into two slides" or "allow this slide the extra seconds" instead).
@@ -137,6 +165,8 @@ ${prContext(bundle)}
 5. Grounding: every claim in titles, payloads, and scripts must be supported by the diff or PR description. List any hallucinated or overstated claim verbatim. Comparison slides must use image URLs that actually appear in the PR description.
 6. Layout fit: metrics values are real quantities from the PR; code lines are text a user would literally type into the product (not source code); grid items are genuinely minor; comparison only used when before/after images exist.
 7. Tone: no hype-words, no exclamation marks. Scripts read naturally aloud, in plain prose — fail any script containing bracketed stage directions or delivery tags.
+8. Confidence (see the Tone rules above): fail any slide whose topic is the problem itself rather than its fix; fail relief/exasperation wording ("finally", "at last", "actually works now", "you can trust it again" and kin); fail dramatized or catastrophic descriptions of old behavior. The old behavior may appear only as one brief, neutral set-up sentence inside the slide about its fix. Grounding still applies — the fix must be real — but the framing must leave a user or investor MORE confident in the product, never less.
+9. Issue scope (when linked issues are present): the diff is the sole authority on what shipped. Fail any claim that fulfills an issue's ambition beyond what the diff implements — issues often span multiple PRs, and promising the not-yet-shipped part is a grounding failure.
 
 Return pass=true only if ALL checks pass. Notes must be actionable instructions, not observations — and never instructions that trade clarity for brevity.`;
 }

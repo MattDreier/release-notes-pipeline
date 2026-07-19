@@ -31,6 +31,15 @@ export function extractImageUrls(body: string): string[] {
   return [...urls];
 }
 
+export type LinkedIssue = { number: number; title: string; body: string };
+
+/** Issue bodies can run to essays (or embed huge logs); keep enough to convey
+ * the user story without letting one issue crowd out the diff. */
+export function truncateIssueBody(body: string, maxChars = 4_000): string {
+  if (body.length <= maxChars) return body;
+  return body.slice(0, maxChars) + `\n[issue body truncated at ${maxChars} characters]`;
+}
+
 export type PrBundle = {
   repo: string; // "owner/name"
   number: number;
@@ -40,6 +49,10 @@ export type PrBundle = {
   mergedAt: string;
   diff: string;
   images: string[];
+  /** Issues this PR closes (via "Closes #N" etc.) — the user story / symptom
+   * that motivated the change. Motivation context only: prompts treat the
+   * diff as the sole authority on what actually shipped. */
+  issues: LinkedIssue[];
   configJson: unknown;
   /** Target repo's CHANGELOG.md on the default branch (null if absent).
    * Source of the previous semver version; the CLI overrides this with the
@@ -85,9 +98,28 @@ export async function gatherPr(
   { diffOverride }: { diffOverride?: string } = {},
 ): Promise<PrBundle> {
   const viewJson = JSON.parse(
-    await gh(["pr", "view", String(pr), "--repo", repo, "--json", "number,title,body,labels,mergedAt"]),
+    await gh([
+      "pr", "view", String(pr), "--repo", repo,
+      "--json", "number,title,body,labels,mergedAt,closingIssuesReferences",
+    ]),
   );
   const diff = truncateDiff(diffOverride ?? (await gh(["pr", "diff", String(pr), "--repo", repo])));
+  // Linked issues carry the user story behind the PR (symptom, who it hurt) —
+  // gold for FIX copy. closingIssuesReferences only exposes number/title, so
+  // fetch each body separately; a failed fetch never blocks generation.
+  const issues: LinkedIssue[] = [];
+  for (const ref of (viewJson.closingIssuesReferences ?? []).slice(0, 3) as { number: number }[]) {
+    try {
+      const issue = JSON.parse(await gh(["api", `/repos/${repo}/issues/${ref.number}`]));
+      issues.push({
+        number: issue.number,
+        title: issue.title ?? "",
+        body: truncateIssueBody(issue.body ?? ""),
+      });
+    } catch (e) {
+      console.error(`  ⚠ linked issue #${ref.number} fetch failed (continuing without it): ${e}`);
+    }
+  }
   const fetchFile = async (path: string): Promise<string | null> => {
     try {
       const raw = await gh(["api", `/repos/${repo}/contents/${path}`, "--jq", ".content"]);
@@ -108,6 +140,7 @@ export async function gatherPr(
     mergedAt: viewJson.mergedAt,
     diff,
     images: extractImageUrls(viewJson.body ?? ""),
+    issues,
     configJson,
     changelog,
   };

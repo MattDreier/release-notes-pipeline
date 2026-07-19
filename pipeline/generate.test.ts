@@ -13,6 +13,7 @@ const bundle: PrBundle = {
   mergedAt: "2026-07-16T12:00:00Z",
   diff: "diff --git a/x b/x",
   images: [],
+  issues: [],
   configJson: undefined,
   changelog: null,
 };

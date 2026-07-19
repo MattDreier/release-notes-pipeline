@@ -12,8 +12,20 @@ const bundle: PrBundle = {
   mergedAt: "2026-07-15T00:00:00Z",
   diff: "diff --git a/x b/x\n+code",
   images: ["https://github.com/user-attachments/assets/before.png"],
+  issues: [],
   configJson: undefined,
   changelog: null,
+};
+
+const bundleWithIssue: PrBundle = {
+  ...bundle,
+  issues: [
+    {
+      number: 260,
+      title: "Multi-timezone scheduling",
+      body: "Jobs should display in the customer's local time zone.",
+    },
+  ],
 };
 
 const config: RepoConfig = {
@@ -54,5 +66,39 @@ describe("prompt builders", () => {
 
   it("critic prompt includes the diff for grounding", () => {
     expect(criticPrompt({}, bundle)).toContain("+code");
+  });
+
+  it("embeds linked issues as motivation with the diff-authority firewall", () => {
+    for (const p of [
+      editorPrompt(bundleWithIssue, config),
+      copyPrompt({ slides: [] }, bundleWithIssue),
+      criticPrompt({}, bundleWithIssue),
+    ]) {
+      expect(p).toContain("Issue #260: Multi-timezone scheduling");
+      expect(p).toContain("customer's local time zone");
+      expect(p).toContain("SOLE authority"); // issues motivate; the diff decides what shipped
+    }
+  });
+
+  it("omits the linked-issues section when the PR closes no issues", () => {
+    expect(editorPrompt(bundle, config)).not.toContain("Linked issues");
+  });
+
+  it("states the confidence-protecting tone rules in every writing pass and the critic", () => {
+    for (const p of [
+      editorPrompt(bundle, config),
+      copyPrompt({ slides: [] }, bundle),
+      voicePrompt({}, { slides: [{ targetSeconds: 6 }] }),
+      criticPrompt({}, bundle),
+    ]) {
+      expect(p).toContain('"finally"'); // relief words banned by name
+      expect(p).toContain("never a dedicated slide"); // bugs don't get their own slide
+    }
+  });
+
+  it("critic checks issue overreach and confidence framing", () => {
+    const p = criticPrompt({}, bundleWithIssue);
+    expect(p).toContain("issues often span multiple PRs");
+    expect(p).toContain("MORE confident");
   });
 });
