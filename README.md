@@ -1,7 +1,20 @@
-# release-notes-pipeline
+# feature-release-pipeline
 
-Merged PR → three audience-matched artifacts, committed straight back to the
+Merged PR → audience-matched artifacts, committed straight back to the
 target repo. You merge; your clients stay informed.
+
+> **Direction.** This started as a release-notes pipeline (below) and is growing
+> a **demo / feature-release** mode: from a PR it produces feature demonstrations
+> and non-interactive training content — a Remotion presentation built from
+> screenshots and gifs, with Cap-style motion (smooth cursor, zoom-before-click,
+> spotlight, blur) and TTS narration.
+>
+> **Capture is external.** A separate **smoke-test agent** drives the app during
+> an automated smoke test and hands this pipeline the **PR + screenshots (when
+> applicable)**. The pipeline consumes them — it does not run a browser. The
+> shared contract is the demo schema in [`pipeline/demo.ts`](pipeline/demo.ts)
+> (three kinds: `before-after`, `settings-demo`, `walkthrough`); a worked example
+> is under [`docs/examples/demo-pipeline/`](docs/examples/demo-pipeline/).
 
 | Audience | Artifact | Where it lands |
 |---|---|---|

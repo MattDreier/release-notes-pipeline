@@ -1,10 +1,18 @@
 # Worked example — demo-pipeline output for `dispatch-schedule-ui#266`
 
-**This is a hand-built preview, not a pipeline run.** The demo pipeline (browser
-capture agent → motion-graphics agent → Remotion demo compositions) does not
-exist yet. These files are the *text artifacts* it is designed to emit,
-authored by hand from a real PR (Universal/Local timezone modes) to pressure-test
-the schema against a real feature before we build the stages.
+**This is a hand-built preview, not a pipeline run.** These files are the *text
+artifacts* the pipeline is designed to emit, authored by hand from a real PR
+(Universal/Local timezone modes) to pressure-test the schema against a real
+feature before we build the stages.
+
+**Capture is not this pipeline's job.** A separate **smoke-test agent** drives
+the app as part of an automated smoke test and produces the PR and the
+screenshots (when applicable). This pipeline *consumes* that PR + those
+screenshots — it does not run a browser itself. The `scenario` schema in
+`pipeline/demo.ts` is the **contract between them**: what the smoke-test agent
+fills in, and what the pipeline reads. Still unbuilt here: the motion-graphics
+pass and the Remotion demo compositions that turn consumed screenshots into a
+narrated video.
 
 ## Three demo concepts
 
@@ -63,11 +71,11 @@ Plus two artifacts shown as shape only (not written as files here):
 
 ## What's a GAP (needs the unbuilt stages)
 
-- **`mode-local` / `mode-universal` are real frames** the user captured by hand
-  (the same board under each `timezoneMode`); the rest of `captures/` are still
-  placeholders needing the browser capture agent on a seeded preview deploy.
-  (PR #266's own body: *"Screenshots could not be captured here (no authenticated
-  session / preview)"* — the gap.)
+- **`mode-local` / `mode-universal` are real frames** (the same board under each
+  `timezoneMode`); the rest of `captures/` are placeholders. In production these
+  arrive from the **smoke-test agent**, not from this pipeline. (PR #266's own
+  body: *"Screenshots could not be captured here (no authenticated session /
+  preview)"* — precisely why capture belongs to the agent that drives the app.)
 - **`universal-local-timezone.mp4`** needs the demo Remotion compositions
   (synthetic cursor / zoom / spotlight / blur over stills+gifs) — none built yet.
   Note the two frames are a settings A/B → they drop straight into the EXISTING
