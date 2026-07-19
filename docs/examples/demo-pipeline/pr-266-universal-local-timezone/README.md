@@ -6,25 +6,36 @@ exist yet. These files are the *text artifacts* it is designed to emit,
 authored by hand from a real PR (Universal/Local timezone modes) to pressure-test
 the schema against a real feature before we build the stages.
 
-## Two demo concepts (both are one-axis comparisons)
+## Three demo concepts
 
-A comparison demo holds the scenario state fixed and varies **exactly one axis**:
+Schema: **[`pipeline/demo.ts`](../../../../pipeline/demo.ts)** — a `kind`-discriminated
+union with `validateDemo()` and 15 tests (`pipeline/demo.test.ts`). Two families:
 
-| Concept | `compare.dimension` | What varies | State B is realized by | Frame labels |
+**Comparisons** hold the scenario state fixed and vary **exactly one axis**
+(scenario = the constant, `compare` = the variable). Both pair into the SAME
+`beforeAfter` layout (`pipeline/manifest.ts`) — only labels + capture differ:
+
+| `kind` | Concept | What varies | State B realized by | Labels |
 |---|---|---|---|---|
-| 1 · before/after | `version` | the **build** (base vs head ref) | checkout + redeploy, re-run scenario | Before / After |
-| 2 · settings demo | `setting` | a **setting** in one build (e.g. `timezoneMode`, colorblind on/off) | flip the setting programmatically (localStorage/URL), re-shoot | the mode names |
+| `before-after` | 1 · before/after | the **build** (base vs head ref) | checkout + redeploy, re-run scenario | Before / After |
+| `settings-demo` | 2 · settings demo | a **setting** in one build (`timezoneMode`, colorblind on/off) | flip it programmatically (localStorage/URL), re-shoot | the mode names |
 
-Both pair into the SAME `beforeAfter` layout (`pipeline/manifest.ts`) — only the
-labels and the capture strategy differ. **This example is Concept 2** (a settings
-demo of `timezoneMode`); it is NOT a before/after, even though the two frames
-resemble one.
+**Sequences** demonstrate how to do something:
+
+| `kind` | Concept | Shape |
+|---|---|---|
+| `walkthrough` | 3 · walkthrough | an ordered `steps[]` — Guideflow-style how-to / non-interactive training. No `compare`. |
+
+**This example is `kind: settings-demo`** (Concept 2, `timezoneMode`) — NOT a
+before/after, even though the two frames resemble one. A Concept-3 walkthrough of
+the same feature is in [`walkthrough.example.yaml`](./walkthrough.example.yaml).
 
 ## What's here (the text layer — fully producible today)
 
 | File | Role | Analog in the release pipeline |
 |---|---|---|
-| `story.scenario.yaml` | **source of truth.** Durable `story:` intent + regenerable `scenarios:` mechanics. | the critic-approved manifest |
+| `story.scenario.yaml` | **source of truth** — a `settings-demo` instance of `pipeline/demo.ts` | the critic-approved manifest |
+| `walkthrough.example.yaml` | the same feature as a `walkthrough` (Concept 3) | — |
 | `feature-guide.md` | **the changelog replacement** — deterministic render for humans | `CHANGELOG.md` / `RELEASE-NOTES.md` |
 | `captures/` | the screenshots/gifs both outputs point at | `video/public/images/` |
 
@@ -36,12 +47,11 @@ Plus two artifacts shown as shape only (not written as files here):
   Drop a WO at the customer's local time, no dropdown.
   [guide](docs/features/universal-local-timezone.md) · [video](docs/features/universal-local-timezone.mp4)
   ```
-- **`manifest.json`** — the release manifest gains a discriminated `kind`:
-  ```jsonc
-  { "kind": "demo",              // vs "release" — a union, not an overload of SlideSchema
-    "story": "universal-local-timezone",
-    "steps": [ /* one per captured scenario step, with narration + effect timeline */ ] }
-  ```
+- **`manifest.json`** — the RENDER manifest (feeds Remotion) mirrors the demo
+  `kind` (`before-after` | `settings-demo` | `walkthrough`), vs the release
+  pipeline's slide manifest — a union, not an overload of `SlideSchema`. The
+  source-of-truth `kind` lives in `pipeline/demo.ts`; the render manifest is its
+  compiled, capture-resolved form.
 - **capture event log** (per step, emitted by the browser agent):
   ```jsonc
   { "action": "click", "selector": "role=radio[name='Local (pick a zone)']",

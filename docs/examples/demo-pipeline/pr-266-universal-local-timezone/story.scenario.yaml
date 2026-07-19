@@ -1,90 +1,81 @@
 # =============================================================================
-# demo-pipeline source-of-truth artifact — ONE file per demo
+# demo source-of-truth — validates against SettingsDemoSchema in pipeline/demo.ts
+# (canonical camelCase form). kind: settings-demo = Concept 2: hold the scenario
+# state fixed, vary ONE setting (timezoneMode) between two frames.
 #
-# CONCEPT MODEL — a comparison demo varies exactly ONE axis and holds everything
-# else fixed (a controlled experiment):
-#   compare.dimension: version   → Concept 1, before/after a CODE change
-#   compare.dimension: setting   → Concept 2, a SETTINGS demo (this file)
-# The `scenario.state` below is the constant; `compare` is the variable. Both
-# dimensions pair into the SAME beforeAfter layout (pipeline/manifest.ts) — only
-# the labels and the capture strategy differ.
-#
-# This demo: MattDreier/dispatch-schedule-ui#266 — the UI difference between
-# Universal and Local time mode, on identical seeded data.
+# The beat: two roof inspections both booked for "10am, customer's local time" —
+# Hoffman (Eastern) and Donnelly (Central). In Local the board reads in one zone
+# and Donnelly looks like an 11am job; in Universal it reads 10:00am CDT and
+# STACKS under Hoffman's 10:00am EDT. The zone tags are the only tell.
 # =============================================================================
+
+kind: settings-demo
 
 story:
   slug: universal-local-timezone
   title: Universal vs Local time mode
-  kind: settings-demo
   source: { repo: MattDreier/dispatch-schedule-ui, pr: 266, issue: 261 }
   persona: A dispatcher covering technicians across two timezones from one board.
   value: >
-    Universal shows each job in the customer's own local time (zone-tagged, and
-    same-local-hour jobs stack at one column); Local pins the whole board to one
-    chosen zone. This demo shows the difference at a glance.
+    Universal shows each job in the customer's own local time (zone-tagged; jobs
+    at the same local hour stack at one column); Local pins the board to one zone.
 
 env:
-  base_url: "${DEMO_BASE_URL}"
+  baseUrl: "${DEMO_BASE_URL}"
   auth: storageState
   viewport: { width: 1440, height: 900, dpr: 2 }
   emulate: { timezone: America/New_York }
   seed:
-    dataset: demo:two-zone-roofing        # identical for both frames — only the setting moves
+    dataset: demo:two-zone-roofing          # identical for both frames — only the setting moves
     jobs:
       - { tech: "Marcus Chen", title: "Hoffman Roof Inspection",  zone: America/New_York, arrive: "10:00 EDT" }
       - { tech: "Priya Patel", title: "Donnelly Roof Inspection", zone: America/Chicago,  arrive: "10:00 CDT" }
 
-# --- the constant: the app state both frames are shot from --------------------
+# the constant: the app state both frames are shot from
 scenario:
   state:
-    - goto: "/"                           # office board; the two seeded jobs are present
-  focus:                                  # what the comparison highlights / verifies
+    - { action: goto, url: "/" }             # office board; the two seeded jobs are present
+  focus:
     subjects:
       - { text: "Hoffman Roof Inspection" }
       - { text: "Donnelly Roof Inspection" }
-    blur: [{ css: ".job-block__customer" }]   # redact customer PII in every frame
+    blur:
+      - { css: ".job-block__customer" }      # redact customer PII in every frame
 
-# --- the variable: one setting, two values -----------------------------------
+# the variable: one setting, two values (persisted in localStorage → apply directly)
 compare:
-  dimension: setting
   label: Time zone mode
   setting:
-    key: timezoneMode                     # persisted in localStorage (#266) → apply programmatically
+    key: timezoneMode
     states:
       - value: local
         label: "Local"
         apply: { localStorage: { timezoneMode: local, axisZone: America/New_York }, reload: true }
-        # Donnelly reads its absolute 11:00am (no tag) and sits at the 11am column.
         expect:
           - { subject: "Donnelly Roof Inspection", text: "11:00am - 12:30pm" }
-        capture: { shot: mode-local }     # == user frame 1
+        capture: { shot: mode-local }        # == user frame 1
 
       - value: universal
         label: "Universal"
         apply: { localStorage: { timezoneMode: universal }, reload: true }
-        # Donnelly reads 10:00am CDT and its LEFT EDGE aligns with Hoffman's 10am.
         expect:
           - { subject: "Donnelly Roof Inspection", text: "10:00am - 11:30am CDT" }
           - { subject: "Hoffman Roof Inspection",  text: "10:00am - 11:30am EDT" }
         assert:
-          aligned_left:                   # verified from event-log targetBox.x
+          alignedLeft:                        # verified from event-log targetBox.x
             - { text: "Hoffman Roof Inspection" }
             - { text: "Donnelly Roof Inspection" }
-        capture: { shot: mode-universal } # == user frame 2
+        capture: { shot: mode-universal }     # == user frame 2
 
-  # Optional: the setting is applied programmatically above for clean A/B frames.
-  # Set `show_toggle` when the toggle itself should appear on screen (a short gif
-  # of flipping the control), layered in addition to the two end-state stills.
-  show_toggle:
+  # optional: film the toggle itself (in addition to the clean A/B stills)
+  showToggle:
     open:
-      - { click: { role: button,   name: "Account menu" } }
-      - { click: { role: menuitem, name: "Settings" } }      # NOT "gear" — real path is avatar → Settings
-      - { expect: { role: dialog,  name: "Configure timeline" } }
-    control: { role: radiogroup, name: "Time zone mode" }    # radios: "Universal" | "Local (pick a zone)"
+      - { action: click, target: { role: button,   name: "Account menu" } }
+      - { action: click, target: { role: menuitem, name: "Settings" } }   # real path — NOT "gear"
+      - { action: expect, role: dialog, name: "Configure timeline" }
+    control: { role: radiogroup, name: "Time zone mode" }
     capture: { gif: toggle, seconds: 3 }
 
-# --- narration (rendered over the paired frames) -----------------------------
 narration:
   voice: default
   script: >

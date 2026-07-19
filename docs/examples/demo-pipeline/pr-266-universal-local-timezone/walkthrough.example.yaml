@@ -1,0 +1,67 @@
+# =============================================================================
+# demo source-of-truth — validates against WalkthroughDemoSchema in pipeline/demo.ts
+# kind: walkthrough = Concept 3: a SEQUENCE (how-to / training), not a comparison.
+# No `compare` block — just ordered `steps`, each with its own narration/effects/
+# capture. Same feature as the settings-demo, shown as "here's how to do it".
+# =============================================================================
+
+kind: walkthrough
+
+story:
+  slug: read-a-job-in-site-time
+  title: Read a job in the customer's timezone
+  source: { repo: MattDreier/dispatch-schedule-ui, pr: 266, issue: 261 }
+  persona: A new dispatcher learning the board.
+  value: Find any job's real local time for the customer, and switch the board to show it.
+
+env:
+  baseUrl: "${DEMO_BASE_URL}"
+  auth: storageState
+  viewport: { width: 1440, height: 900, dpr: 2 }
+  emulate: { timezone: America/New_York }
+  seed: { dataset: demo:two-zone-roofing }
+
+steps:
+  - action: goto
+    url: "/"
+    say: "Start on the schedule board."
+    capture: { shot: board }
+
+  - action: hover
+    target: { text: "Donnelly Roof Inspection" }
+    say: "Hover any job to see both clocks — the customer's site time, and yours."
+    effects:
+      blur: [{ css: ".job-block__customer" }]
+    capture: { gif: tooltip, seconds: 2.5 }
+
+  - action: click
+    target: { role: button, name: "Account menu" }
+  - action: click
+    target: { role: menuitem, name: "Settings" }
+    say: "To make every job show its own local time, open Settings."
+  - action: expect
+    role: dialog
+    name: "Configure timeline"
+
+  - action: click
+    target: { role: radio, name: "Universal" }
+    say: "Choose Universal. Now each block reads in its own zone, tagged when it isn't yours."
+    effects:
+      spotlight: [{ role: radiogroup, name: "Time zone mode" }]
+    capture: { gif: choose-universal, seconds: 3 }
+
+  - action: click
+    target: { role: button, name: "Close" }
+    say: "Close the dialog — jobs at the same local hour now line up in one column."
+    effects:
+      spotlight:
+        - { text: "Hoffman Roof Inspection" }
+        - { text: "Donnelly Roof Inspection" }
+    capture: { shot: universal-board }
+
+narration:
+  voice: default
+  script: >
+    Every job on the board can tell you the customer's own local time. Hover to
+    see both clocks; then switch the board to Universal so each job always reads
+    in its site zone — and same-hour jobs line up at a glance.
