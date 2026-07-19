@@ -60,12 +60,21 @@ export type RunRecord = {
 };
 
 /** Thrown by generateManifest when all attempts are exhausted; carries the
- * per-cycle records so the ledger can persist the failed run's full history. */
+ * per-cycle records so the ledger can persist the failed run's full history.
+ *
+ * It also carries the salvageable changelog inputs from the last attempt.
+ * The video is what fails to converge — the technical bullets come straight
+ * from the diff-grounded editor pass and never depend on the critic gate, so
+ * a PR whose video is withheld can still ship its CHANGELOG entry rather than
+ * vanishing from the record entirely. `technical` is empty only if the run
+ * died before the first editor pass produced a plan. */
 export class GenerationExhausted extends Error {
   constructor(
     message: string,
     public readonly attempts: AttemptRecord[],
     public readonly finalNotes: string[],
+    public readonly technical: { category: string; bullet: string }[] = [],
+    public readonly version: string = "",
   ) {
     super(message);
     this.name = "GenerationExhausted";

@@ -124,6 +124,43 @@ if (values["skip-agent"]) {
         attempts: e.attempts,
       });
       console.error(`run ledger: ${path}`);
+
+      // Graceful degradation: the VIDEO never converged, but the technical
+      // bullets came from the diff-grounded editor pass and are safe to ship.
+      // Salvage the CHANGELOG entry so a merged PR is never silently dropped
+      // from the record (and CI goes green instead of blocking the merge
+      // train). We deliberately do NOT ship the last draft's video/RELEASE-
+      // NOTES prose — it's the copy the critic kept rejecting, exactly the
+      // unreviewed content this project exists to keep off screen.
+      const salvage = (e.technical ?? []) as TechnicalItem[];
+      if (values.target && salvage.length > 0) {
+        const day = new Date(bundle.mergedAt).toISOString().slice(0, 10);
+        const changelogPath = join(values.target, "CHANGELOG.md");
+        const clSection = changelogSection({
+          version: e.version || "unversioned",
+          date: day,
+          pr: bundle.number,
+          repo: values.repo,
+          items: salvage,
+        });
+        let existing: string | null = null;
+        try {
+          existing = await readFile(changelogPath, "utf8");
+        } catch {
+          /* no changelog yet */
+        }
+        await writeFile(changelogPath, upsertChangelog(existing, clSection));
+        console.error(
+          `⚠ video withheld (copy did not converge after ${e.attempts.length} attempts) — ` +
+            `salvaged ${salvage.length} CHANGELOG bullet(s) to ${changelogPath}. ` +
+            `Re-run generation to attempt the video again.`,
+        );
+        console.log(`✓ ${changelogPath} (changelog-only; video withheld)`);
+        process.exit(0);
+      }
+      console.error(
+        "⚠ no salvageable changelog bullets (generation failed before the first plan) — nothing written.",
+      );
     }
     throw e;
   }
