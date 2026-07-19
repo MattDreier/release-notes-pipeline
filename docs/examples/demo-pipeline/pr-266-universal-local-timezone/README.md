@@ -39,12 +39,14 @@ Plus two artifacts shown as shape only (not written as files here):
 
 ## What's a GAP (needs the unbuilt stages)
 
-- **`captures/*` are placeholders.** Real frames need the browser capture agent
-  driving a seeded preview deploy. Fitting, since PR #266's own body says
-  *"Screenshots could not be captured here (no authenticated session / preview)"* —
-  that's precisely the gap this pipeline closes.
+- **`before-single-zone` / `after-universal` are real frames** the user captured
+  by hand; the rest of `captures/` are still placeholders needing the browser
+  capture agent on a seeded preview deploy. (PR #266's own body: *"Screenshots
+  could not be captured here (no authenticated session / preview)"* — the gap.)
 - **`universal-local-timezone.mp4`** needs the demo Remotion compositions
   (synthetic cursor / zoom / spotlight / blur over stills+gifs) — none built yet.
+  Note the two real frames are a before/after pair → they drop straight into the
+  EXISTING `comparison` / `beforeAfter` layout (`pipeline/manifest.ts`).
 
 ## What hitting a REAL PR taught us (design deltas)
 
@@ -61,3 +63,12 @@ Plus two artifacts shown as shape only (not written as files here):
 4. **Blur has real stakes here.** Blocks carry customer PII; `blur:` by selector
    is authored intent, and if the data is genuinely sensitive it should be
    redacted at capture, not just in Remotion.
+5. **The real frames corrected the feature model.** In Universal mode the suffix
+   is *always on* (the axis is a wall-clock, so every block self-identifies), not
+   only cross-zone — and the standout behavior is *positional*: two same-local-hour
+   jobs STACK at one column. So the scenario needs a **layout assertion**
+   (`aligned_left`), and the capture event-log's `targetBox.x` is exactly what
+   verifies it — the telemetry doubles as visual-regression truth.
+6. **The best demo was in the data, not the prose.** The compelling beat (the
+   stack) came from looking at two seeded jobs, not from the PR description. The
+   scenario-author agent should reason over *seeded app state*, not just PR text.

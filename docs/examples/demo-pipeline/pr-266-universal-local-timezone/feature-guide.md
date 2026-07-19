@@ -1,88 +1,58 @@
 <!--
   GENERATED ARTIFACT — the changelog-replacement in the demo pipeline.
-  Rendered deterministically (no LLM) from story.scenario.yaml + captures +
-  the approved manifest, so this guide and the video cannot disagree.
-  In a real run the [capture: …] slots are the exact frames the video used.
-  Lands in the TARGET repo as docs/features/universal-local-timezone.md
+  Rendered deterministically (no LLM) from story.scenario.yaml + captures.
+  This guide and the video render from the same source, so they can't disagree.
+  Captures here == the two real board frames (single-zone vs Universal).
+  Lands in the target repo as docs/features/universal-local-timezone.md
 -->
 
 # Universal & Local timezone modes
 
-> **For:** a dispatcher covering sites in another timezone.
-> **You'll be able to:** drop a work order at the customer's local time — "10am
-> at the site" — with no dropdown and no mental math.
+> **For:** a dispatcher covering technicians in more than one timezone.
+> **You'll be able to:** read and drop every job at the customer's local time —
+> "10am at the site" — with no dropdown and no mental math.
 >
-> _Feature #261 · [PR #266](https://github.com/MattDreier/dispatch-schedule-ui/pull/266) · 90-second walkthrough ▸ [video](./universal-local-timezone.mp4)_
+> _Feature #261 · [PR #266](https://github.com/MattDreier/dispatch-schedule-ui/pull/266) · 60-second walkthrough ▸ [video](./universal-local-timezone.mp4)_
 
-The board now speaks the **customer's** local time by default, and tags a time
-whenever it isn't yours — so a cross-zone drop can't quietly land an hour off.
+## The problem, in one board
 
----
+![Board in a single timezone: Hoffman at 10am, Donnelly at 11am](./captures/before-single-zone.png)
 
-### 1. Every job already reads in its own local time
+Two roof inspections. **Hoffman** (Marcus Chen) reads **10:00am**; **Donnelly**
+(Priya Patel) reads **11:00am** and sits an hour to the right. Except both were
+booked for **10am — the customer's local time**. Hoffman's site is Eastern,
+Donnelly's is Central. On a single-zone board, that hour of difference is
+invisible until someone does the math.
 
-![The board, viewed on a Central-time laptop](./captures/suffix-rule.png)
+## Turn on Universal mode
 
-You're in Kansas City — Central time. The job at the **St. Petersburg, FL** site
-reads **`10:00am EDT`**: the customer's local time, tagged `EDT` so you know it
-isn't your zone. The Central-time job beside it stays clean — **`9:00am`**, no
-tag. That's the whole rule: **a zone suffix appears only when the time isn't the
-one your axis is in.**
+Open the **account menu → Settings**, and in _Configure timeline → Time zone_
+choose **Universal**. (It's the default for new boards.)
 
-### 2. Hover to see both clocks
+## The same board, now in everyone's local time
 
-![Tooltip showing site time and your time](./captures/tooltip-dual.gif)
+![Universal mode: both jobs at 10am, tagged EDT and CDT, stacked](./captures/after-universal.png)
 
-Hovering a block spells it out in full: **`10:00–11:00am EDT (site) · 9:00–10:00am
-CDT (you)`**. If a site's zone had to be assumed (missing coordinates), the
-tooltip says so.
+Donnelly jumps to **`10:00am – 11:30am CDT`** and lines up **directly under**
+Hoffman's **`10:00am – 11:30am EDT`**. Both customers are getting a 10am visit,
+so both blocks sit at 10am — and each block **tags its own zone** so you can see,
+at a glance, that they're actually an hour apart in real time.
 
-### 3. Drag, and the job keeps speaking site time
+That's the whole rule: **in Universal mode every job shows its own site-local
+time, zone-tagged.** Jobs that share a local hour share a column.
 
-![Dragging the Florida job; the ghost reads EDT](./captures/drag-ghost.gif)
+> **Hover any block** for both clocks at once: `10:00–11:30am CDT (site) ·
+> 11:00am–12:30pm EDT (you)`.
 
-Pick up the St. Petersburg job and the drag ghost stays in **site** time — still
-`EDT`. You're aiming at the customer's clock the whole way.
+## Prefer one fixed zone? Use Local
 
-### 4. The drop confirmation leads with the customer's time
-
-![Confirm dialog: Arrive 10:00am EDT · 9:00am CDT your time](./captures/confirm-lead.png)
-
-> **Arrive 10:00am EDT** · 9:00am CDT your time
-
-The confirmation puts the customer's time first and yours in the small print —
-the last check against a wrong-hour drop.
+In the same **Time zone** setting, choose **Local** and pick a zone. The whole
+board reads in that single zone, the hour axis relabels to it, and a persistent
+**`Viewing in <ZONE>`** badge appears in the toolbar so you never forget the
+board isn't in your device's zone.
 
 ---
 
-## Optional: pin the whole board to one zone (Local mode)
-
-By default you're in **Universal** mode — every block shows its own site time.
-If you'd rather read the entire board in one fixed zone:
-
-### 5. Open settings → Configure timeline → Time zone
-
-![The Configure timeline dialog, Time zone section](./captures/settings-open.png)
-
-Open the **account menu**, choose **Settings**, and find the **Time zone**
-section of _Configure timeline_.
-
-### 6. Switch to Local and pick a zone
-
-![Switching to Local mode and choosing Eastern](./captures/switch-to-local.gif)
-
-Choose **Local (pick a zone)** and select **Eastern**. Now the whole board reads
-in Eastern regardless of where each site is.
-
-### 7. The board tells you it isn't in your zone
-
-![The 'Viewing in EDT' indicator in the toolbar](./captures/viewing-indicator.png)
-
-The hour axis relabels to Eastern, and a persistent **`Viewing in EDT`** badge
-stays in the toolbar — so you never forget the board isn't in your device's zone.
-
----
-
-<sub>Not yet wired (shipping next): the dominant drag-lens ruler, and editing the
-confirm time directly in site zone. The suffix, dual tooltip, and site-led
-confirm cover the cross-zone case today.</sub>
+<sub>Shipping next: the dominant drag-lens ruler, and editing the drop-confirm
+time directly in the site's zone. Today the always-on suffix, the dual-time
+tooltip, and a site-led drop confirmation carry the cross-zone case.</sub>
