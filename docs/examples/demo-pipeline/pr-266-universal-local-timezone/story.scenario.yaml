@@ -1,108 +1,95 @@
 # =============================================================================
-# demo-pipeline source-of-truth artifact  —  ONE file per feature
-#   frontmatter `story:`   = durable authored intent (persona/value).
-#   `scenarios:`           = regenerable executable mechanics, resolved against
-#                            the LIVE app (self-heals when the UI drifts).
+# demo-pipeline source-of-truth artifact — ONE file per demo
 #
-# Grounded in MattDreier/dispatch-schedule-ui#266 AND two real captured frames
-# of the board (single-zone vs Universal). Selectors are semantic — the repo
-# ships zero data-testid.
+# CONCEPT MODEL — a comparison demo varies exactly ONE axis and holds everything
+# else fixed (a controlled experiment):
+#   compare.dimension: version   → Concept 1, before/after a CODE change
+#   compare.dimension: setting   → Concept 2, a SETTINGS demo (this file)
+# The `scenario.state` below is the constant; `compare` is the variable. Both
+# dimensions pair into the SAME beforeAfter layout (pipeline/manifest.ts) — only
+# the labels and the capture strategy differ.
 #
-# THE demo beat: two roof inspections both booked for "10am, customer's local
-# time" — Hoffman (Eastern) and Donnelly (Central). In a single zone Donnelly
-# looks like an 11am job and sits an hour to the right. In Universal mode it
-# reads 10:00am CDT and STACKS under Hoffman's 10:00am EDT — the zone tags are
-# the only thing revealing they're an hour apart in absolute time.
+# This demo: MattDreier/dispatch-schedule-ui#266 — the UI difference between
+# Universal and Local time mode, on identical seeded data.
 # =============================================================================
 
 story:
   slug: universal-local-timezone
-  title: Universal & Local timezone modes
+  title: Universal vs Local time mode
+  kind: settings-demo
   source: { repo: MattDreier/dispatch-schedule-ui, pr: 266, issue: 261 }
-  persona: >
-    A dispatcher covering technicians across two timezones from one board.
-  goal: >
-    Read and drop every job at the time the CUSTOMER experiences it — "10am at
-    the site" — without a dropdown and without doing the math in my head.
+  persona: A dispatcher covering technicians across two timezones from one board.
   value: >
-    Jobs booked for the same local hour line up at the same board column and
-    tag their own zone, so a cross-zone job can't hide an hour off.
-  acceptance:              # doubles as the smoke-test — capture fails ⇒ regressed
-    - In Universal mode every block shows its own site time with a zone suffix.
-    - Two jobs at the same site-local hour (Hoffman 10am EDT, Donnelly 10am CDT)
-      render at the SAME axis column — their block left-edges align.
-    - Switching the same board to a single zone removes the suffixes and moves
-      Donnelly to its absolute 11am position.
+    Universal shows each job in the customer's own local time (zone-tagged, and
+    same-local-hour jobs stack at one column); Local pins the whole board to one
+    chosen zone. This demo shows the difference at a glance.
 
 env:
-  base_url: "${DEMO_BASE_URL}"          # seeded preview deploy
-  auth: storageState                    # (auth)/login exists — capture runs authed
+  base_url: "${DEMO_BASE_URL}"
+  auth: storageState
   viewport: { width: 1440, height: 900, dpr: 2 }
-  emulate:
-    timezone: America/New_York          # device = Eastern; Universal tags every block regardless
+  emulate: { timezone: America/New_York }
   seed:
-    dataset: demo:two-zone-roofing
+    dataset: demo:two-zone-roofing        # identical for both frames — only the setting moves
     jobs:
       - { tech: "Marcus Chen", title: "Hoffman Roof Inspection",  zone: America/New_York, arrive: "10:00 EDT" }
       - { tech: "Priya Patel", title: "Donnelly Roof Inspection", zone: America/Chicago,  arrive: "10:00 CDT" }
 
-# effect vocabulary:
-#   derived  (auto from event log): cursor spline, zoom-before-click, settle pauses
-#   authored (semantic intent):     spotlight / blur / callout, addressed BY SELECTOR
+# --- the constant: the app state both frames are shot from --------------------
+scenario:
+  state:
+    - goto: "/"                           # office board; the two seeded jobs are present
+  focus:                                  # what the comparison highlights / verifies
+    subjects:
+      - { text: "Hoffman Roof Inspection" }
+      - { text: "Donnelly Roof Inspection" }
+    blur: [{ css: ".job-block__customer" }]   # redact customer PII in every frame
 
-scenarios:
-  - id: stacking-reveal
-    name: Two 10am jobs line up in Universal mode
-    narration_voice: default
-    steps:
-      # --- BEFORE: single-zone view (frame 1) --------------------------------
-      - goto: "/"
-        precondition: { timezoneMode: local, axisZone: America/New_York }  # single zone, no tags
-        say: "Here's the board reading in one timezone. Two roof inspections."
-        capture: { shot: before-single-zone }        # == user frame 1
+# --- the variable: one setting, two values -----------------------------------
+compare:
+  dimension: setting
+  label: Time zone mode
+  setting:
+    key: timezoneMode                     # persisted in localStorage (#266) → apply programmatically
+    states:
+      - value: local
+        label: "Local"
+        apply: { localStorage: { timezoneMode: local, axisZone: America/New_York }, reload: true }
+        # Donnelly reads its absolute 11:00am (no tag) and sits at the 11am column.
+        expect:
+          - { subject: "Donnelly Roof Inspection", text: "11:00am - 12:30pm" }
+        capture: { shot: mode-local }     # == user frame 1
 
-      - note: donnelly-looks-like-11
-        target: { text: "Donnelly Roof Inspection" }
-        expect_text: "11:00am - 12:30pm"             # no suffix, sits at the 11am column
-        effects:
-          spotlight: { text: "Donnelly Roof Inspection" }
-        say: >
-          Donnelly reads eleven a-m and sits an hour to the right of Hoffman.
-          But it's really a ten a-m job — for the customer.
-
-      # --- toggle to Universal (the feature's namesake) ----------------------
-      - click: { role: button, name: "Account menu" }
-      - click: { role: menuitem, name: "Settings" }
-        expect: { role: dialog, name: "Configure timeline" }
-      - within: { role: radiogroup, name: "Time zone mode" }
-        click: { role: radio, name: "Universal" }
-        say: "Switch to Universal — every job in the customer's own local time."
-        capture: { gif: toggle-universal, seconds: 3 }
-      - click: { role: button, name: "Close" }
-
-      # --- AFTER: the stack (frame 2) ----------------------------------------
-      - note: stack-reveal
-        target: { text: "Donnelly Roof Inspection" }
-        expect_text: "10:00am - 11:30am CDT"         # Donnelly now 10am CDT...
+      - value: universal
+        label: "Universal"
+        apply: { localStorage: { timezoneMode: universal }, reload: true }
+        # Donnelly reads 10:00am CDT and its LEFT EDGE aligns with Hoffman's 10am.
+        expect:
+          - { subject: "Donnelly Roof Inspection", text: "10:00am - 11:30am CDT" }
+          - { subject: "Hoffman Roof Inspection",  text: "10:00am - 11:30am EDT" }
         assert:
-          aligned_left:                              # ...and its left edge matches Hoffman's.
-            - { text: "Hoffman Roof Inspection" }    # (checked from event-log targetBox.x —
-            - { text: "Donnelly Roof Inspection" }   #  the telemetry doubles as visual regression)
-        effects:
-          spotlight:
+          aligned_left:                   # verified from event-log targetBox.x
             - { text: "Hoffman Roof Inspection" }
             - { text: "Donnelly Roof Inspection" }
-          callout: { text: "EDT", note: "same 10am — different zone" }
-        say: >
-          There. Donnelly jumps to ten a-m Central and lines up right under
-          Hoffman's ten a-m Eastern. Same hour for both customers — the tags
-          are the only thing telling you they're an hour apart. No mental math.
-        capture: { shot: after-universal }           # == user frame 2
+        capture: { shot: mode-universal } # == user frame 2
 
-      # --- corroborating detail: the tooltip spells out both clocks ----------
-      - hover: { text: "Donnelly Roof Inspection" }
-        expect_text: "CDT (site)"                    # "10:00–11:30am CDT (site) · … EDT (you)"
-        effects:
-          blur: [{ css: ".job-block__customer" }]    # redact any customer PII in-frame
-        say: "Hover for both clocks at once — site time, and your time."
-        capture: { gif: tooltip-dual, seconds: 2.5 }
+  # Optional: the setting is applied programmatically above for clean A/B frames.
+  # Set `show_toggle` when the toggle itself should appear on screen (a short gif
+  # of flipping the control), layered in addition to the two end-state stills.
+  show_toggle:
+    open:
+      - { click: { role: button,   name: "Account menu" } }
+      - { click: { role: menuitem, name: "Settings" } }      # NOT "gear" — real path is avatar → Settings
+      - { expect: { role: dialog,  name: "Configure timeline" } }
+    control: { role: radiogroup, name: "Time zone mode" }    # radios: "Universal" | "Local (pick a zone)"
+    capture: { gif: toggle, seconds: 3 }
+
+# --- narration (rendered over the paired frames) -----------------------------
+narration:
+  voice: default
+  script: >
+    Same two roof inspections, both booked for ten a-m the customer's time. In
+    Local mode the board reads in one zone, so Donnelly looks like an eleven
+    o'clock job. Flip to Universal and Donnelly snaps to ten a-m Central, right
+    under Hoffman's ten a-m Eastern — same hour for both customers, and the zone
+    tags are the only thing telling you they're an hour apart.

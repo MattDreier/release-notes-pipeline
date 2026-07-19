@@ -6,6 +6,20 @@ exist yet. These files are the *text artifacts* it is designed to emit,
 authored by hand from a real PR (Universal/Local timezone modes) to pressure-test
 the schema against a real feature before we build the stages.
 
+## Two demo concepts (both are one-axis comparisons)
+
+A comparison demo holds the scenario state fixed and varies **exactly one axis**:
+
+| Concept | `compare.dimension` | What varies | State B is realized by | Frame labels |
+|---|---|---|---|---|
+| 1 · before/after | `version` | the **build** (base vs head ref) | checkout + redeploy, re-run scenario | Before / After |
+| 2 · settings demo | `setting` | a **setting** in one build (e.g. `timezoneMode`, colorblind on/off) | flip the setting programmatically (localStorage/URL), re-shoot | the mode names |
+
+Both pair into the SAME `beforeAfter` layout (`pipeline/manifest.ts`) — only the
+labels and the capture strategy differ. **This example is Concept 2** (a settings
+demo of `timezoneMode`); it is NOT a before/after, even though the two frames
+resemble one.
+
 ## What's here (the text layer — fully producible today)
 
 | File | Role | Analog in the release pipeline |
@@ -39,14 +53,15 @@ Plus two artifacts shown as shape only (not written as files here):
 
 ## What's a GAP (needs the unbuilt stages)
 
-- **`before-single-zone` / `after-universal` are real frames** the user captured
-  by hand; the rest of `captures/` are still placeholders needing the browser
-  capture agent on a seeded preview deploy. (PR #266's own body: *"Screenshots
-  could not be captured here (no authenticated session / preview)"* — the gap.)
+- **`mode-local` / `mode-universal` are real frames** the user captured by hand
+  (the same board under each `timezoneMode`); the rest of `captures/` are still
+  placeholders needing the browser capture agent on a seeded preview deploy.
+  (PR #266's own body: *"Screenshots could not be captured here (no authenticated
+  session / preview)"* — the gap.)
 - **`universal-local-timezone.mp4`** needs the demo Remotion compositions
   (synthetic cursor / zoom / spotlight / blur over stills+gifs) — none built yet.
-  Note the two real frames are a before/after pair → they drop straight into the
-  EXISTING `comparison` / `beforeAfter` layout (`pipeline/manifest.ts`).
+  Note the two frames are a settings A/B → they drop straight into the EXISTING
+  `comparison` / `beforeAfter` layout (`pipeline/manifest.ts`), labels Local/Universal.
 
 ## What hitting a REAL PR taught us (design deltas)
 
@@ -72,3 +87,8 @@ Plus two artifacts shown as shape only (not written as files here):
 6. **The best demo was in the data, not the prose.** The compelling beat (the
    stack) came from looking at two seeded jobs, not from the PR description. The
    scenario-author agent should reason over *seeded app state*, not just PR text.
+7. **"Before/after" and "settings demo" are distinct — don't conflate.** Both are
+   one-axis comparisons, but Concept 1 varies the *build* and Concept 2 varies a
+   *setting*. The timezone frames look like a before/after and aren't one — the
+   difference lives in `compare.dimension`, which also picks the capture strategy
+   (two deploys vs one). Scenario = the constant; `compare` = the variable.
